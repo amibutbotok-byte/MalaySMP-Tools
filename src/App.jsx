@@ -8,14 +8,14 @@ import {
 
 // ─── Constants ───
 const SOCIAL_LINKS = {
-  youtube: 'https://youtube.com/@YourChannel',
-  tiktok: 'https://tiktok.com/@YourChannel',
-  discord: 'https://discord.gg/YourServer',
-  donate: 'https://ko-fi.com/YourPage',
+  youtube: 'https://www.youtube.com/@lostsharkstudio',
+  tiktok: 'https://www.tiktok.com/@lostsharkz',
+  discord: 'https://discord.gg/DkJYCrg47K',
+  donate: 'https://sociabuzz.com/lostsharkofficial',
 };
-const VOICECRAFT_LINK = 'https://example.com/voicecraft-download';
-const ADMIN_EMAIL = 'admin@server.com';
-const ADMIN_PASS = 'admin123';
+const VOICECRAFT_LINK = 'https://github.com/AvionBlock/VoiceCraft/releases/tag/v1.4.0';
+const ADMIN_EMAIL = 'lostsharkofficial@server.com';
+const ADMIN_PASS = 'syahmiharis321';
 
 // ─── Helpers ───
 function getLS(key, fallback) {
