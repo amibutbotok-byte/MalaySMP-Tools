@@ -1,7 +1,7 @@
 # MalaySMP Tools
 
 A full-stack-style React web app for the **MalaySMP** Minecraft Private Roleplay Server community.  
-Built with **Vite + React + Tailwind CSS v4** — all in a single `src/App.jsx` file.
+Built with **Vite + React + Tailwind CSS v4 + Firebase** — all in a single `src/App.jsx` file.
 
 ---
 
@@ -9,11 +9,104 @@ Built with **Vite + React + Tailwind CSS v4** — all in a single `src/App.jsx` 
 
 - 🎨 Dark cinematic Minecraft-inspired theme with particle effects & glassmorphism
 - 🏠 Public landing page (hero, features, gallery, social links)
-- 🔐 Sign Up / Login with localStorage (no backend required)
+- 🔐 Sign Up / Login with **Firebase Authentication** (email + password)
+- ✉️ **Email verification** — users must verify their email before submitting applications
+- ☁️ **Cloud database (Firestore)** — all data is shared in real-time across every browser and device
 - 📋 Server application form (gamertag, Discord ID, skin upload, VoiceCraft confirmation, …)
-- 🛡️ Admin panel — review, accept, or decline applications with search & filters
-- 📊 Application status page for members
+- 🛡️ Admin panel — review, accept, or decline applications with search & filters (real-time updates)
+- 📊 Application status page for members (updates in real-time)
 - 🔔 Toast notifications, smooth page transitions, fully responsive
+
+---
+
+## 🔥 Firebase Setup (Required — One-Time)
+
+The app uses **Firebase** for authentication and data storage so that all users
+share the same data. Follow these steps **once** to set up your own Firebase project.
+
+### 1. Create a Firebase Project
+
+1. Go to [Firebase Console](https://console.firebase.google.com/)
+2. Click **"Create a project"** (or "Add project")
+3. Enter a project name (e.g. `MalaySMP`)
+4. Disable Google Analytics (optional) → **Create Project**
+
+### 2. Enable Authentication
+
+1. In the Firebase Console, go to **Build → Authentication**
+2. Click **"Get started"**
+3. Under **Sign-in method**, enable **Email/Password**
+4. Click **Save**
+
+### 3. Create a Firestore Database
+
+1. Go to **Build → Firestore Database**
+2. Click **"Create database"**
+3. Choose **Start in test mode** (you can tighten rules later)
+4. Select a Cloud Firestore location close to your users → **Enable**
+
+### 4. Set Firestore Security Rules
+
+Once the database is created, go to **Firestore → Rules** and paste:
+
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // User profiles — owner can read/write, admin can read all
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read: if request.auth != null
+                  && request.auth.token.email == 'YOUR_ADMIN_EMAIL_HERE';
+    }
+
+    // Applications — authenticated users can create & read their own,
+    // admin can read/update all
+    match /applications/{appId} {
+      allow create: if request.auth != null;
+      allow read:   if request.auth != null
+                    && (resource.data.userId == request.auth.uid
+                        || request.auth.token.email == 'YOUR_ADMIN_EMAIL_HERE');
+      allow update: if request.auth != null
+                    && request.auth.token.email == 'YOUR_ADMIN_EMAIL_HERE';
+    }
+  }
+}
+```
+
+> **Important:** Replace `YOUR_ADMIN_EMAIL_HERE` with your real admin email in **both** places above.
+
+Click **Publish**.
+
+### 5. Register a Web App & Get Config
+
+1. In the Firebase Console, click the **gear icon** → **Project settings**
+2. Scroll down to **"Your apps"** and click the **Web** icon (`</>`)
+3. Enter a nickname (e.g. `MalaySMP Web`) → **Register app**
+4. You will see a `firebaseConfig` object. Copy the values — you need them next.
+
+### 6. Add Config as GitHub Secrets
+
+Go to your GitHub repo → **Settings → Secrets and variables → Actions → New repository secret** and add each of these:
+
+| Secret name | Value (from Firebase config) |
+|---|---|
+| `VITE_FIREBASE_API_KEY` | `apiKey` |
+| `VITE_FIREBASE_AUTH_DOMAIN` | `authDomain` |
+| `VITE_FIREBASE_PROJECT_ID` | `projectId` |
+| `VITE_FIREBASE_STORAGE_BUCKET` | `storageBucket` |
+| `VITE_FIREBASE_MESSAGING_SENDER_ID` | `messagingSenderId` |
+| `VITE_FIREBASE_APP_ID` | `appId` |
+| `VITE_ADMIN_EMAIL` | Your admin email (e.g. `youremail@gmail.com`) |
+
+> **Tip:** The admin email **must be a real email address** that can receive verification emails.
+> Sign up through the app with this email to create the admin account.
+
+### 7. Deploy
+
+Push to `main` (or re-run the workflow manually) — the deploy workflow will
+inject the secrets at build time and deploy to GitHub Pages automatically.
 
 ---
 
@@ -35,10 +128,12 @@ cd MalaySMP-Tools
 
 # 2. Install dependencies
 npm install --legacy-peer-deps
-# (--legacy-peer-deps is needed because @tailwindcss/vite 4.x
-#  hasn't listed vite 8 as a peer yet — everything works fine)
 
-# 3. Start the dev server
+# 3. Create your .env file from the example
+cp .env.example .env
+# Then open .env and fill in your Firebase config values (see Firebase Setup above)
+
+# 4. Start the dev server
 npm run dev
 ```
 
@@ -62,10 +157,11 @@ This repo includes a GitHub Actions workflow that **automatically deploys** to G
 
 ### First-time setup (one-time)
 
-1. Go to your repo on GitHub → **Settings** → **Pages**
-2. Under **Source**, select **GitHub Actions**
-3. Push any change to the `main` branch (or merge this PR)
-4. The workflow runs automatically — your site will be live at:
+1. Complete the **Firebase Setup** above (create project, enable auth, create database, add secrets)
+2. Go to your repo on GitHub → **Settings** → **Pages**
+3. Under **Source**, select **GitHub Actions**
+4. Push any change to the `main` branch (or merge this PR)
+5. The workflow runs automatically — your site will be live at:
 
    **https://amibutbotok-byte.github.io/MalaySMP-Tools/**
 
@@ -78,8 +174,9 @@ That's it! Every future push to `main` re-deploys automatically.
 
 1. Go to [vercel.com](https://vercel.com) and sign in with GitHub
 2. Click **"Add New Project"** → import `MalaySMP-Tools`
-3. Vercel auto-detects Vite — just click **Deploy**
-4. Your site is live at `https://your-project.vercel.app`
+3. Add the `VITE_FIREBASE_*` and `VITE_ADMIN_EMAIL` environment variables in the project settings
+4. Vercel auto-detects Vite — just click **Deploy**
+5. Your site is live at `https://your-project.vercel.app`
 
 > **Note:** If deploying to Vercel or Netlify (where the app is served from `/`), change `base` in `vite.config.js` from `'/MalaySMP-Tools/'` to `'/'`.
 </details>
@@ -87,7 +184,7 @@ That's it! Every future push to `main` re-deploys automatically.
 <details>
 <summary><strong>Netlify</strong> (free, drag-and-drop)</summary>
 
-1. Run `npm run build` locally
+1. Run `npm run build` locally (make sure `.env` is filled in)
 2. Go to [app.netlify.com/drop](https://app.netlify.com/drop)
 3. Drag the `dist/` folder onto the page
 4. Your site is instantly live
@@ -99,16 +196,14 @@ That's it! Every future push to `main` re-deploys automatically.
 
 ## 🧪 Testing the App
 
-Since the app uses **localStorage** for all data (no backend), you can test every feature locally:
+The app uses **Firebase** for all data — every user shares the same database in real time.
 
 1. **Landing page** — Open the site; browse as a visitor
-2. **Sign up** — Create an account (email, password, gamertag)
-3. **Submit application** — Fill in the server application form
-4. **Check status** — Click "My Status" to see your application status
-5. **Admin panel** — Log in with `admin@server.com` / `admin123` to review applications
-
-All data is stored in your browser's localStorage and persists across refreshes.  
-To reset everything, open DevTools → Application → Local Storage → Clear.
+2. **Sign up** — Create an account (you will receive a verification email)
+3. **Verify email** — Click the link in the email, then refresh the app
+4. **Submit application** — Fill in the server application form
+5. **Check status** — Click "My Status" to see your application status (updates in real time)
+6. **Admin panel** — Log in with the email you set as `VITE_ADMIN_EMAIL` to review applications
 
 ---
 
@@ -122,11 +217,13 @@ MalaySMP-Tools/
 ├── src/
 │   ├── main.jsx          # React entry point
 │   ├── index.css          # Tailwind CSS imports & custom styles
+│   ├── firebase.js        # Firebase init & exports
 │   └── App.jsx            # ← All components, logic & pages (single-file)
+├── .env.example           # Example environment variables
 ├── vite.config.js         # Vite + Tailwind config
 ├── package.json           # Dependencies & scripts
 └── .github/workflows/
-    └── deploy.yml         # GitHub Pages auto-deploy
+    └── deploy.yml         # GitHub Pages auto-deploy (injects Firebase secrets)
 ```
 
 ---

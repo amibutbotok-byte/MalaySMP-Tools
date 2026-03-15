@@ -1,10 +1,21 @@
-import { useState, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Sword, Shield, Users, Star, Youtube, MessageCircle, Heart, ExternalLink,
   LogIn, UserPlus, LogOut, Menu, X, ChevronRight, Send, Upload, Check,
   XCircle, Clock, Search, Bell, Eye, Gamepad2, Mic, Globe, Filter,
-  Home, FileText, Settings, CheckCircle, AlertCircle, Sparkles
+  Home, FileText, Settings, CheckCircle, AlertCircle, Sparkles, Mail,
+  RefreshCw
 } from 'lucide-react';
+import {
+  auth, db,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  sendEmailVerification,
+  signOut,
+  onAuthStateChanged,
+  collection, doc, setDoc, getDoc, getDocs,
+  updateDoc, query, where, onSnapshot,
+} from './firebase.js';
 
 // ─── Constants ───
 const SOCIAL_LINKS = {
@@ -14,15 +25,9 @@ const SOCIAL_LINKS = {
   donate: 'https://sociabuzz.com/lostsharkofficial',
 };
 const VOICECRAFT_LINK = 'https://github.com/AvionBlock/VoiceCraft/releases/tag/v1.4.0';
-const ADMIN_EMAIL = 'lostsharkofficial@server.com';
-const ADMIN_PASS = 'syahmiharis321';
+const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || '';
 
 // ─── Helpers ───
-function getLS(key, fallback) {
-  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
-  catch { return fallback; }
-}
-function setLS(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
 function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 
 // ─── Toast System ───
@@ -276,43 +281,49 @@ function AuthPage({ mode, setPage, onAuth, addToast }) {
   const [gamertag, setGamertag] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => {
-      const users = getLS('msmp_users', []);
+    try {
       if (mode === 'signup') {
-        if (users.find(u => u.email === email)) {
-          addToast('An account with this email already exists.', 'error');
-          setLoading(false);
-          return;
-        }
-        const newUser = { id: genId(), email, password, gamertag, createdAt: new Date().toISOString() };
-        setLS('msmp_users', [...users, newUser]);
-        setLS('msmp_current_user', newUser);
-        addToast('Account created! Welcome to MalaySMP.', 'success');
-        onAuth(newUser);
+        const cred = await createUserWithEmailAndPassword(auth, email, password);
+        await sendEmailVerification(cred.user);
+        await setDoc(doc(db, 'users', cred.user.uid), {
+          email,
+          gamertag,
+          createdAt: new Date().toISOString(),
+        });
+        addToast('Account created! Check your email for a verification link.', 'success');
+        onAuth({
+          id: cred.user.uid,
+          email,
+          gamertag,
+          emailVerified: cred.user.emailVerified,
+          isAdmin: email === ADMIN_EMAIL,
+        });
       } else {
-        // Admin login
-        if (email === ADMIN_EMAIL && password === ADMIN_PASS) {
-          const adminUser = { id: 'admin', email: ADMIN_EMAIL, gamertag: 'Admin', isAdmin: true };
-          setLS('msmp_current_user', adminUser);
-          addToast('Welcome back, Admin!', 'success');
-          onAuth(adminUser);
-          return;
-        }
-        const found = users.find(u => u.email === email && u.password === password);
-        if (!found) {
-          addToast('Invalid email or password.', 'error');
-          setLoading(false);
-          return;
-        }
-        setLS('msmp_current_user', found);
-        addToast(`Welcome back, ${found.gamertag}!`, 'success');
-        onAuth(found);
+        const cred = await signInWithEmailAndPassword(auth, email, password);
+        const snap = await getDoc(doc(db, 'users', cred.user.uid));
+        const profile = snap.exists() ? snap.data() : {};
+        addToast(`Welcome back, ${profile.gamertag || 'Player'}!`, 'success');
+        onAuth({
+          id: cred.user.uid,
+          email: cred.user.email,
+          gamertag: profile.gamertag || 'Player',
+          emailVerified: cred.user.emailVerified,
+          isAdmin: cred.user.email === ADMIN_EMAIL,
+        });
       }
-      setLoading(false);
-    }, 800);
+    } catch (err) {
+      const msg =
+        err.code === 'auth/email-already-in-use' ? 'An account with this email already exists.' :
+        err.code === 'auth/invalid-credential'    ? 'Invalid email or password.' :
+        err.code === 'auth/weak-password'          ? 'Password must be at least 6 characters.' :
+        err.code === 'auth/invalid-email'          ? 'Please enter a valid email address.' :
+        err.message || 'Something went wrong.';
+      addToast(msg, 'error');
+    }
+    setLoading(false);
   };
 
   return (
@@ -374,7 +385,7 @@ function AuthPage({ mode, setPage, onAuth, addToast }) {
 
 // ─── Application Form ───
 function ApplicationForm({ user, addToast, setPage }) {
-  const existing = getLS('msmp_applications', []).find(a => a.userId === user.id);
+  const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({
     gamertag: user.gamertag || '',
     discordId: '',
@@ -387,7 +398,38 @@ function ApplicationForm({ user, addToast, setPage }) {
     voiceCraftConfirm: false,
     additionalMessage: '',
   });
-  const [submitted, setSubmitted] = useState(!!existing);
+  const [submitted, setSubmitted] = useState(false);
+
+  // Check for existing application
+  useEffect(() => {
+    (async () => {
+      try {
+        const q = query(collection(db, 'applications'), where('userId', '==', user.id));
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+          setSubmitted(true);
+        }
+      } catch { /* ignore */ }
+      setLoading(false);
+    })();
+  }, [user.id]);
+
+  // Email verification banner
+  const needsVerification = !user.emailVerified;
+  const [resending, setResending] = useState(false);
+
+  const resendVerification = async () => {
+    setResending(true);
+    try {
+      if (auth.currentUser) {
+        await sendEmailVerification(auth.currentUser);
+        addToast('Verification email sent! Check your inbox.', 'success');
+      }
+    } catch {
+      addToast('Could not send verification email. Try again later.', 'error');
+    }
+    setResending(false);
+  };
 
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
@@ -397,8 +439,12 @@ function ApplicationForm({ user, addToast, setPage }) {
     reader.readAsDataURL(file);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    if (needsVerification) {
+      addToast('Please verify your email before submitting. Check your inbox.', 'error');
+      return;
+    }
     if (!form.discordId || !form.gender || !form.age || !form.rpInterest) {
       addToast('Please fill in all required fields.', 'error');
       return;
@@ -407,19 +453,31 @@ function ApplicationForm({ user, addToast, setPage }) {
       addToast('You must confirm VoiceCraft download and microphone agreement.', 'error');
       return;
     }
-    const apps = getLS('msmp_applications', []);
-    const app = {
-      id: genId(),
-      userId: user.id,
-      email: user.email,
-      status: 'pending',
-      submittedAt: new Date().toISOString(),
-      ...form,
-    };
-    setLS('msmp_applications', [...apps, app]);
-    setSubmitted(true);
-    addToast('Your application has been submitted!', 'success');
+    try {
+      const appId = genId();
+      await setDoc(doc(db, 'applications', appId), {
+        id: appId,
+        userId: user.id,
+        email: user.email,
+        status: 'pending',
+        submittedAt: new Date().toISOString(),
+        ...form,
+      });
+      setSubmitted(true);
+      addToast('Your application has been submitted!', 'success');
+    } catch {
+      addToast('Failed to submit application. Please try again.', 'error');
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="glass rounded-2xl p-8 text-center animate-fade-in">
+        <div className="w-8 h-8 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin mx-auto mb-3"/>
+        <p className="text-gray-400">Loading application…</p>
+      </div>
+    );
+  }
 
   if (submitted) {
     return (
@@ -443,6 +501,21 @@ function ApplicationForm({ user, addToast, setPage }) {
     <form onSubmit={handleSubmit} className="glass rounded-2xl p-6 md:p-8 animate-fade-in">
       <h3 className="text-xl font-bold text-white mb-1">Server Application</h3>
       <p className="text-gray-500 text-sm mb-6">Fill out all fields to apply for whitelist access.</p>
+
+      {/* Email verification banner */}
+      {needsVerification && (
+        <div className="mb-6 p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/30 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+          <Mail size={20} className="text-yellow-400 flex-shrink-0 mt-0.5 sm:mt-0"/>
+          <div className="flex-1">
+            <p className="text-yellow-300 text-sm font-medium">Email not verified</p>
+            <p className="text-yellow-400/70 text-xs">You must verify your email before you can submit an application. Check your inbox for the verification link, then refresh this page.</p>
+          </div>
+          <button type="button" onClick={resendVerification} disabled={resending}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30 transition-all text-xs font-medium whitespace-nowrap disabled:opacity-50">
+            <RefreshCw size={12} className={resending ? 'animate-spin' : ''}/> Resend Email
+          </button>
+        </div>
+      )}
 
       <div className="grid md:grid-cols-2 gap-4 mb-4">
         <div>
@@ -577,8 +650,21 @@ function Dashboard({ user, addToast, setPage }) {
 
 // ─── Application Status Page ───
 function StatusPage({ user }) {
-  const apps = getLS('msmp_applications', []);
-  const myApp = apps.find(a => a.userId === user.id);
+  const [myApp, setMyApp] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const q = query(collection(db, 'applications'), where('userId', '==', user.id));
+    const unsub = onSnapshot(q, (snap) => {
+      if (!snap.empty) {
+        setMyApp({ id: snap.docs[0].id, ...snap.docs[0].data() });
+      } else {
+        setMyApp(null);
+      }
+      setLoading(false);
+    }, () => setLoading(false));
+    return unsub;
+  }, [user.id]);
 
   const statusConfig = {
     pending: { icon: <Clock size={32}/>, color: 'text-yellow-400', bg: 'bg-yellow-500/10', label: 'Pending Review', desc: 'Your application is being reviewed by our admins.' },
@@ -590,7 +676,12 @@ function StatusPage({ user }) {
     <div className="min-h-screen pt-24 pb-12 px-4 max-w-2xl mx-auto">
       <div className="animate-fade-in">
         <h1 className="text-3xl font-bold text-white mb-6">Application Status</h1>
-        {myApp ? (() => {
+        {loading ? (
+          <div className="glass rounded-2xl p-8 text-center">
+            <div className="w-8 h-8 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin mx-auto mb-3"/>
+            <p className="text-gray-400">Loading status…</p>
+          </div>
+        ) : myApp ? (() => {
           const cfg = statusConfig[myApp.status];
           return (
             <div className={`glass rounded-2xl p-8 text-center`}>
@@ -622,15 +713,27 @@ function StatusPage({ user }) {
 
 // ─── Admin Panel ───
 function AdminPanel({ addToast }) {
-  const [apps, setApps] = useState(getLS('msmp_applications', []));
+  const [apps, setApps] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const updateStatus = (appId, status) => {
-    const updated = apps.map(a => a.id === appId ? { ...a, status } : a);
-    setLS('msmp_applications', updated);
-    setApps(updated);
-    addToast(`Application ${status === 'accepted' ? 'accepted ✅' : 'declined ❌'}`, status === 'accepted' ? 'success' : 'error');
+  // Real-time listener on all applications
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'applications'), (snap) => {
+      setApps(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setLoading(false);
+    }, () => setLoading(false));
+    return unsub;
+  }, []);
+
+  const updateStatus = async (appId, status) => {
+    try {
+      await updateDoc(doc(db, 'applications', appId), { status });
+      addToast(`Application ${status === 'accepted' ? 'accepted ✅' : 'declined ❌'}`, status === 'accepted' ? 'success' : 'error');
+    } catch {
+      addToast('Failed to update application status.', 'error');
+    }
   };
 
   const filteredApps = apps.filter(a => {
@@ -675,6 +778,13 @@ function AdminPanel({ addToast }) {
             <p className="text-gray-500">Manage server applications and whitelist.</p>
           </div>
         </div>
+
+        {loading ? (
+          <div className="glass rounded-2xl p-12 text-center">
+            <div className="w-8 h-8 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin mx-auto mb-3"/>
+            <p className="text-gray-400">Loading applications…</p>
+          </div>
+        ) : (<>
 
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
@@ -783,6 +893,8 @@ function AdminPanel({ addToast }) {
             ))}
           </div>
         )}
+
+        </>)}
       </div>
     </div>
   );
@@ -790,14 +902,40 @@ function AdminPanel({ addToast }) {
 
 // ─── Main App ───
 export default function App() {
-  const [user, setUser] = useState(() => getLS('msmp_current_user', null));
-  const [page, setPage] = useState(() => {
-    const u = getLS('msmp_current_user', null);
-    if (u) return u.email === ADMIN_EMAIL ? 'admin' : 'dashboard';
-    return 'landing';
-  });
+  const [user, setUser] = useState(null);
+  const [page, setPage] = useState('landing');
   const [toasts, setToasts] = useState([]);
   const [transitioning, setTransitioning] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
+
+  // Listen for Firebase auth state changes (persists across refreshes)
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        try {
+          const snap = await getDoc(doc(db, 'users', firebaseUser.uid));
+          const profile = snap.exists() ? snap.data() : {};
+          const u = {
+            id: firebaseUser.uid,
+            email: firebaseUser.email,
+            gamertag: profile.gamertag || 'Player',
+            emailVerified: firebaseUser.emailVerified,
+            isAdmin: firebaseUser.email === ADMIN_EMAIL,
+          };
+          setUser(u);
+          setPage(u.isAdmin ? 'admin' : 'dashboard');
+        } catch {
+          setUser(null);
+          setPage('landing');
+        }
+      } else {
+        setUser(null);
+        setPage('landing');
+      }
+      setAuthLoading(false);
+    });
+    return unsub;
+  }, []);
 
   const addToast = useCallback((message, type = 'info') => {
     const id = genId();
@@ -823,12 +961,28 @@ export default function App() {
     navigate(u.email === ADMIN_EMAIL ? 'admin' : 'dashboard');
   }, [navigate]);
 
-  const handleLogout = useCallback(() => {
-    localStorage.removeItem('msmp_current_user');
+  const handleLogout = useCallback(async () => {
+    try {
+      await signOut(auth);
+    } catch { /* ignore */ }
     setUser(null);
     navigate('landing');
     addToast('Logged out successfully.', 'info');
   }, [navigate, addToast]);
+
+  // Show loading screen while Firebase checks auth state
+  if (authLoading) {
+    return (
+      <div className="relative min-h-screen bg-[#0a0a0a] text-gray-200 flex items-center justify-center">
+        <Particles/>
+        <div className="text-center animate-fade-in">
+          <Sword size={40} className="mx-auto text-emerald-400 animate-float mb-4"/>
+          <div className="w-8 h-8 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin mx-auto mb-3"/>
+          <p className="text-gray-500 text-sm">Loading MalaySMP…</p>
+        </div>
+      </div>
+    );
+  }
 
   const renderPage = () => {
     switch (page) {
