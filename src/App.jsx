@@ -409,7 +409,9 @@ function ApplicationForm({ user, addToast, setPage }) {
         if (!snap.empty) {
           setSubmitted(true);
         }
-      } catch { /* ignore */ }
+      } catch (err) {
+        console.error('Failed to check existing application:', err);
+      }
       setLoading(false);
     })();
   }, [user.id]);
@@ -425,7 +427,8 @@ function ApplicationForm({ user, addToast, setPage }) {
         await sendEmailVerification(auth.currentUser);
         addToast('Verification email sent! Check your inbox.', 'success');
       }
-    } catch {
+    } catch (err) {
+      console.error('Failed to send verification email:', err);
       addToast('Could not send verification email. Try again later.', 'error');
     }
     setResending(false);
