@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import {
   Sword, Shield, Users, Star, Youtube, MessageCircle, Heart, ExternalLink,
   LogIn, UserPlus, LogOut, Menu, X, ChevronRight, Send, Upload, Check,
@@ -49,17 +49,18 @@ function ToastContainer({ toasts, removeToast }) {
 }
 
 // ─── Particle Background ───
+const PARTICLES = Array.from({ length: 30 }, (_, i) => ({
+  id: i,
+  left: (i * 3.33 + i * 7.1) % 100,
+  delay: (i * 0.5) % 15,
+  duration: 10 + (i * 1.7) % 20,
+  size: 2 + (i * 0.13) % 4,
+}));
+
 function Particles() {
-  const particles = Array.from({ length: 30 }, (_, i) => ({
-    id: i,
-    left: Math.random() * 100,
-    delay: Math.random() * 15,
-    duration: 10 + Math.random() * 20,
-    size: 2 + Math.random() * 4,
-  }));
   return (
     <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-      {particles.map(p => (
+      {PARTICLES.map(p => (
         <div key={p.id} className="absolute rounded-full bg-emerald-500/20"
           style={{
             left: `${p.left}%`, width: p.size, height: p.size,
@@ -624,10 +625,6 @@ function AdminPanel({ addToast }) {
   const [apps, setApps] = useState(getLS('msmp_applications', []));
   const [tab, setTab] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-
-  const refreshApps = useCallback(() => setApps(getLS('msmp_applications', [])), []);
-
-  useEffect(() => { refreshApps(); }, [refreshApps]);
 
   const updateStatus = (appId, status) => {
     const updated = apps.map(a => a.id === appId ? { ...a, status } : a);
