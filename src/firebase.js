@@ -1,9 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import {
   getAuth,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  sendEmailVerification,
   signOut,
   onAuthStateChanged,
   GoogleAuthProvider,
@@ -24,6 +21,8 @@ import {
   where,
   onSnapshot,
   writeBatch,
+  serverTimestamp,
+  orderBy,
 } from 'firebase/firestore';
 import {
   getStorage,
@@ -59,9 +58,6 @@ export {
   auth,
   db,
   storage,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  sendEmailVerification,
   signOut,
   onAuthStateChanged,
   GoogleAuthProvider,
@@ -79,6 +75,8 @@ export {
   where,
   onSnapshot,
   writeBatch,
+  serverTimestamp,
+  orderBy,
   storageRef,
   uploadBytes,
   getDownloadURL,
