@@ -6,6 +6,10 @@ import {
   sendEmailVerification,
   signOut,
   onAuthStateChanged,
+  GoogleAuthProvider,
+  signInWithPopup,
+  deleteUser,
+  updateProfile,
 } from 'firebase/auth';
 import {
   getFirestore,
@@ -15,10 +19,18 @@ import {
   getDoc,
   getDocs,
   updateDoc,
+  deleteDoc,
   query,
   where,
   onSnapshot,
+  writeBatch,
 } from 'firebase/firestore';
+import {
+  getStorage,
+  ref as storageRef,
+  uploadBytes,
+  getDownloadURL,
+} from 'firebase/storage';
 
 // ─── Firebase Configuration ───
 // These values identify your Firebase project. They are safe to include in
@@ -41,22 +53,33 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const storage = getStorage(app);
 
 export {
   auth,
   db,
+  storage,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   sendEmailVerification,
   signOut,
   onAuthStateChanged,
+  GoogleAuthProvider,
+  signInWithPopup,
+  deleteUser,
+  updateProfile,
   collection,
   doc,
   setDoc,
   getDoc,
   getDocs,
   updateDoc,
+  deleteDoc,
   query,
   where,
   onSnapshot,
+  writeBatch,
+  storageRef,
+  uploadBytes,
+  getDownloadURL,
 };

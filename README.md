@@ -9,7 +9,7 @@ Built with **Vite + React + Tailwind CSS v4 + Firebase** — all in a single `sr
 
 - 🎨 Dark cinematic Minecraft-inspired theme with particle effects & glassmorphism
 - 🏠 Public landing page (hero, features, gallery, social links)
-- 🔐 Sign Up / Login with **Firebase Authentication** (email + password)
+- 🔐 Sign Up / Login with **Firebase Authentication** (email + password, or **Google Sign-in**)
 - ✉️ **Email verification** — users must verify their email before submitting applications
 - ☁️ **Cloud database (Firestore)** — all data is shared in real-time across every browser and device
 - 📋 Server application form (gamertag, Discord ID, skin upload, VoiceCraft confirmation, …)
@@ -35,8 +35,13 @@ share the same data. Follow these steps **once** to set up your own Firebase pro
 
 1. In the Firebase Console, go to **Build → Authentication**
 2. Click **"Get started"**
-3. Under **Sign-in method**, enable **Email/Password**
-4. Click **Save**
+3. Under **Sign-in method**, enable **Email/Password** → click **Save**
+4. Still on the Sign-in method page, click **"Add new provider"** → select **Google**
+5. Toggle **Enable** on, choose a **support email** (your Gmail), then click **Save**
+
+> **Why both?** Email/Password lets users create accounts with any email.
+> Google Sign-in lets users log in with one click (no verification email needed).
+> If you only enable one of them, that's fine too — the app supports both.
 
 ### 3. Create a Firestore Database
 
@@ -79,14 +84,28 @@ service cloud.firestore {
 
 Click **Publish**.
 
-### 5. Register a Web App & Get Config
+### 5. Add Authorized Domains (for Google Sign-in)
+
+If you deploy to GitHub Pages (or any custom domain), add the domain so that
+Google Sign-in works:
+
+1. In the Firebase Console, go to **Build → Authentication → Settings**
+2. Scroll to **Authorized domains**
+3. Click **Add domain** and add your deployment domain, e.g.:
+   - `amibutbotok-byte.github.io` (GitHub Pages)
+   - `your-project.vercel.app` (Vercel)
+   - `your-project.netlify.app` (Netlify)
+
+> `localhost` is already authorized by default for local development.
+
+### 6. Register a Web App & Get Config
 
 1. In the Firebase Console, click the **gear icon** → **Project settings**
 2. Scroll down to **"Your apps"** and click the **Web** icon (`</>`)
 3. Enter a nickname (e.g. `MalaySMP Web`) → **Register app**
 4. You will see a `firebaseConfig` object. Copy the values — you need them next.
 
-### 6. Add Config as GitHub Secrets
+### 7. Add Config as GitHub Secrets
 
 Go to your GitHub repo → **Settings → Secrets and variables → Actions → New repository secret** and add each of these:
 
@@ -103,7 +122,7 @@ Go to your GitHub repo → **Settings → Secrets and variables → Actions → 
 > **Tip:** The admin email **must be a real email address** that can receive verification emails.
 > Sign up through the app with this email to create the admin account.
 
-### 7. Deploy
+### 8. Deploy
 
 Push to `main` (or re-run the workflow manually) — the deploy workflow will
 inject the secrets at build time and deploy to GitHub Pages automatically.
@@ -204,6 +223,27 @@ The app uses **Firebase** for all data — every user shares the same database i
 4. **Submit application** — Fill in the server application form
 5. **Check status** — Click "My Status" to see your application status (updates in real time)
 6. **Admin panel** — Log in with the email you set as `VITE_ADMIN_EMAIL` to review applications
+
+---
+
+## 🔧 Troubleshooting
+
+### Email verification not arriving?
+
+Firebase sends verification emails from `noreply@YOUR_PROJECT.firebaseapp.com`.
+Some email providers filter these:
+
+1. **Check Spam / Junk** — look in your Spam or Junk folder first.
+2. **Gmail Promotions tab** — if you use Gmail, also check the Promotions tab.
+3. **Wait a minute** — emails can take 1–2 minutes to arrive.
+4. **Resend** — on the Dashboard page, click the **Resend Email** button in the yellow banner.
+5. **Use Google Sign-in instead** — Google-authenticated users are automatically verified (no email needed).
+
+### Google Sign-in popup not working?
+
+1. Make sure you enabled the **Google** provider in **Firebase Console → Authentication → Sign-in method**.
+2. Make sure your deployment domain is listed in **Authentication → Settings → Authorized domains**.
+3. If you see a "popup blocked" error, allow popups for your site in your browser settings.
 
 ---
 
