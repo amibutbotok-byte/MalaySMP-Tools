@@ -724,10 +724,10 @@ function Dashboard({ user, addToast, setPage }) {
   const quickActions = [
     { label: 'My Status', desc: 'Check your application status', icon: <FileText size={24}/>, color: 'from-yellow-500/20 to-yellow-600/10 border-yellow-500/30 hover:border-yellow-400/50', iconColor: 'text-yellow-400', action: () => setPage('status') },
     { label: 'Members', desc: 'View whitelisted players', icon: <Users size={24}/>, color: 'from-blue-500/20 to-blue-600/10 border-blue-500/30 hover:border-blue-400/50', iconColor: 'text-blue-400', action: () => setPage('members') },
-    { label: 'Discord', desc: 'Join our community server', icon: <MessageCircle size={24}/>, color: 'from-indigo-500/20 to-indigo-600/10 border-indigo-500/30 hover:border-indigo-400/50', iconColor: 'text-indigo-400', action: () => window.open(SOCIAL_LINKS.discord, '_blank') },
-    { label: 'YouTube', desc: 'Watch our latest content', icon: <Youtube size={24}/>, color: 'from-red-500/20 to-red-600/10 border-red-500/30 hover:border-red-400/50', iconColor: 'text-red-400', action: () => window.open(SOCIAL_LINKS.youtube, '_blank') },
-    { label: 'TikTok', desc: 'Follow us on TikTok', icon: <Globe size={24}/>, color: 'from-pink-500/20 to-pink-600/10 border-pink-500/30 hover:border-pink-400/50', iconColor: 'text-pink-400', action: () => window.open(SOCIAL_LINKS.tiktok, '_blank') },
-    { label: 'Donate', desc: 'Support the server', icon: <Heart size={24}/>, color: 'from-orange-500/20 to-orange-600/10 border-orange-500/30 hover:border-orange-400/50', iconColor: 'text-orange-400', action: () => window.open(SOCIAL_LINKS.donate, '_blank') },
+    { label: 'Discord', desc: 'Join our community server', icon: <MessageCircle size={24}/>, color: 'from-indigo-500/20 to-indigo-600/10 border-indigo-500/30 hover:border-indigo-400/50', iconColor: 'text-indigo-400', action: () => window.open(SOCIAL_LINKS.discord, '_blank', 'noopener,noreferrer') },
+    { label: 'YouTube', desc: 'Watch our latest content', icon: <Youtube size={24}/>, color: 'from-red-500/20 to-red-600/10 border-red-500/30 hover:border-red-400/50', iconColor: 'text-red-400', action: () => window.open(SOCIAL_LINKS.youtube, '_blank', 'noopener,noreferrer') },
+    { label: 'TikTok', desc: 'Follow us on TikTok', icon: <Globe size={24}/>, color: 'from-pink-500/20 to-pink-600/10 border-pink-500/30 hover:border-pink-400/50', iconColor: 'text-pink-400', action: () => window.open(SOCIAL_LINKS.tiktok, '_blank', 'noopener,noreferrer') },
+    { label: 'Donate', desc: 'Support the server', icon: <Heart size={24}/>, color: 'from-orange-500/20 to-orange-600/10 border-orange-500/30 hover:border-orange-400/50', iconColor: 'text-orange-400', action: () => window.open(SOCIAL_LINKS.donate, '_blank', 'noopener,noreferrer') },
   ];
 
   return (
