@@ -3,14 +3,12 @@ import {
   Flame, Shield, Users, Star, Youtube, MessageCircle, Heart, ExternalLink,
   LogIn, UserPlus, LogOut, Menu, X, ChevronRight, Send, Upload, Check,
   XCircle, Clock, Search, Bell, Eye, Gamepad2, Mic, Globe, Filter,
-  Home, FileText, Settings, CheckCircle, AlertCircle, Sparkles, Mail,
+  Home, FileText, Settings, CheckCircle, AlertCircle, Sparkles,
   RefreshCw, Trash2, Download, Palette, Image, User, Megaphone, Type,
+  ArrowUpDown, Edit,
 } from 'lucide-react';
 import {
   auth, db, storage,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  sendEmailVerification,
   signOut,
   onAuthStateChanged,
   GoogleAuthProvider,
@@ -19,6 +17,7 @@ import {
   updateProfile,
   collection, doc, setDoc, getDoc, getDocs,
   updateDoc, deleteDoc, query, where, onSnapshot, writeBatch,
+  serverTimestamp,
   storageRef, uploadBytes, getDownloadURL,
 } from './firebase.js';
 
@@ -31,6 +30,8 @@ const SOCIAL_LINKS = {
 };
 const VOICECRAFT_LINK = 'https://github.com/AvionBlock/VoiceCraft/releases/tag/v1.4.0';
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || '';
+const FIRESTORE_BATCH_LIMIT = 500;
+const VALID_SKIN_DIMENSIONS = [[64, 64], [64, 128]];
 
 // ─── Helpers ───
 function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
@@ -100,16 +101,18 @@ function Navbar({ page, setPage, user, onLogout }) {
   const navItems = user ? (
     isAdmin ? [
       { label: 'Dashboard', icon: <Settings size={16}/>, page: 'admin' },
+      { label: 'Members', icon: <Users size={16}/>, page: 'members' },
     ] : [
       { label: 'Home', icon: <Home size={16}/>, page: 'landing' },
       { label: 'Dashboard', icon: <Gamepad2 size={16}/>, page: 'dashboard' },
       { label: 'My Status', icon: <FileText size={16}/>, page: 'status' },
       { label: 'Profile', icon: <User size={16}/>, page: 'profile' },
+      { label: 'Members', icon: <Users size={16}/>, page: 'members' },
     ]
   ) : [
     { label: 'Home', icon: <Home size={16}/>, page: 'landing' },
+    { label: 'Members', icon: <Users size={16}/>, page: 'members' },
     { label: 'Login', icon: <LogIn size={16}/>, page: 'login' },
-    { label: 'Sign Up', icon: <UserPlus size={16}/>, page: 'signup' },
   ];
 
   return (
@@ -232,13 +235,13 @@ function LandingPage({ setPage, siteSettings }) {
             {description}
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <button onClick={() => setPage('signup')}
-              className="px-8 py-3 rounded-lg bg-orange-600 hover:bg-orange-500 text-white font-semibold transition-all animate-pulse-glow animate-btn-press flex items-center justify-center gap-2">
-              <UserPlus size={18}/> Apply Now
-            </button>
             <button onClick={() => setPage('login')}
+              className="px-8 py-3 rounded-lg bg-orange-600 hover:bg-orange-500 text-white font-semibold transition-all animate-pulse-glow animate-btn-press flex items-center justify-center gap-2">
+              <LogIn size={18}/> Apply Now
+            </button>
+            <button onClick={() => setPage('members')}
               className="px-8 py-3 rounded-lg glass glass-hover text-gray-300 hover:text-white font-semibold transition-all animate-btn-press flex items-center justify-center gap-2">
-              <LogIn size={18}/> Member Login
+              <Users size={18}/> View Members
             </button>
           </div>
         </div>
@@ -288,9 +291,9 @@ function LandingPage({ setPage, siteSettings }) {
         <div className="glass rounded-2xl p-10">
           <h2 className="text-3xl font-bold text-white mb-3">Ready to Begin Your Story?</h2>
           <p className="text-gray-400 mb-6">Create an account and submit your application to join the server.</p>
-          <button onClick={() => setPage('signup')}
+          <button onClick={() => setPage('login')}
             className="px-8 py-3 rounded-lg bg-orange-600 hover:bg-orange-500 text-white font-semibold transition-all animate-btn-press inline-flex items-center gap-2">
-            Login or Create Account to Apply <ChevronRight size={18}/>
+            Sign In with Google to Apply <ChevronRight size={18}/>
           </button>
         </div>
       </section>
@@ -315,71 +318,37 @@ function GoogleIcon({ size = 18 }) {
   );
 }
 
-// ─── Auth Page (Login / Signup) ───
-function AuthPage({ mode, setPage, onAuth, addToast }) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [gamertag, setGamertag] = useState('');
+// ─── Auth Page (Google Sign-In Only) ───
+function AuthPage({ addToast }) {
   const [loading, setLoading] = useState(false);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      if (mode === 'signup') {
-        const cred = await createUserWithEmailAndPassword(auth, email, password);
-        await sendEmailVerification(cred.user);
-        await setDoc(doc(db, 'users', cred.user.uid), {
-          email,
-          gamertag,
-          createdAt: new Date().toISOString(),
-        });
-        addToast('Account created! Check your email (and Spam folder) for a verification link.', 'success');
-        onAuth({
-          id: cred.user.uid,
-          email,
-          gamertag,
-          emailVerified: cred.user.emailVerified,
-          isAdmin: email === ADMIN_EMAIL,
-        });
-      } else {
-        const cred = await signInWithEmailAndPassword(auth, email, password);
-        const snap = await getDoc(doc(db, 'users', cred.user.uid));
-        const profile = snap.exists() ? snap.data() : {};
-        addToast(`Welcome back, ${profile.gamertag || 'Player'}!`, 'success');
-        onAuth({
-          id: cred.user.uid,
-          email: cred.user.email,
-          gamertag: profile.gamertag || 'Player',
-          emailVerified: cred.user.emailVerified,
-          isAdmin: cred.user.email === ADMIN_EMAIL,
-        });
-      }
-    } catch (err) {
-      const msg =
-        err.code === 'auth/email-already-in-use' ? 'An account with this email already exists.' :
-        err.code === 'auth/invalid-credential'    ? 'Invalid email or password.' :
-        err.code === 'auth/weak-password'          ? 'Password must be at least 6 characters.' :
-        err.code === 'auth/invalid-email'          ? 'Please enter a valid email address.' :
-        err.message || 'Something went wrong.';
-      addToast(msg, 'error');
-    }
-    setLoading(false);
-  };
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
     try {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
-      addToast(`Signed in as ${result.user.email}`, 'success');
+      const firebaseUser = result.user;
+      const userDocRef = doc(db, 'users', firebaseUser.uid);
+      const snap = await getDoc(userDocRef);
+      if (!snap.exists()) {
+        await setDoc(userDocRef, {
+          email: firebaseUser.email,
+          displayName: firebaseUser.displayName || '',
+          photoURL: firebaseUser.photoURL || '',
+          gamertag: '',
+          createdAt: new Date().toISOString(),
+        });
+      } else {
+        await updateDoc(userDocRef, {
+          email: firebaseUser.email,
+          displayName: firebaseUser.displayName || '',
+          photoURL: firebaseUser.photoURL || '',
+        });
+      }
+      addToast(`Signed in as ${firebaseUser.email}`, 'success');
     } catch (err) {
       if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
-        const msg =
-          err.code === 'auth/account-exists-with-different-credential'
-            ? 'An account with this email already exists. Try logging in with email/password instead.'
-            : err.message || 'Google sign-in failed.';
-        addToast(msg, 'error');
+        addToast(err.message || 'Google sign-in failed.', 'error');
       }
       setLoading(false);
     }
@@ -390,71 +359,20 @@ function AuthPage({ mode, setPage, onAuth, addToast }) {
       <div className="w-full max-w-md glass rounded-2xl p-8 animate-fade-in">
         <div className="text-center mb-6">
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-orange-500/20 text-orange-400 mb-4">
-            {mode === 'login' ? <LogIn size={24}/> : <UserPlus size={24}/>}
+            <LogIn size={24}/>
           </div>
-          <h2 className="text-2xl font-bold text-white">
-            {mode === 'login' ? 'Welcome Back' : 'Create Account'}
-          </h2>
-          <p className="text-gray-500 text-sm mt-1">
-            {mode === 'login' ? 'Login to access your dashboard' : 'Join the MalaySMP community'}
-          </p>
+          <h2 className="text-2xl font-bold text-white">Welcome to MalaySMP</h2>
+          <p className="text-gray-500 text-sm mt-1">Sign in with your Google account to continue</p>
         </div>
 
-        {/* Google Sign-in Button */}
         <button type="button" onClick={handleGoogleSignIn} disabled={loading}
-          className="w-full py-3 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 disabled:opacity-50 text-white font-semibold transition-all flex items-center justify-center gap-3 mb-4 animate-btn-press">
+          className="w-full py-3 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 disabled:opacity-50 text-white font-semibold transition-all flex items-center justify-center gap-3 animate-btn-press">
           {loading ? (
             <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"/>
           ) : (
-            <><GoogleIcon size={20}/> Sign in with Google</>
+            <><GoogleIcon size={20}/> Continue with Google</>
           )}
         </button>
-
-        {/* Divider */}
-        <div className="flex items-center gap-3 mb-4">
-          <div className="flex-1 h-px bg-white/10"/>
-          <span className="text-gray-500 text-xs uppercase">or</span>
-          <div className="flex-1 h-px bg-white/10"/>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm text-gray-400 mb-1">Email</label>
-            <input type="email" required value={email} onChange={e => setEmail(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/50 transition"
-              placeholder="you@example.com"/>
-          </div>
-          <div>
-            <label className="block text-sm text-gray-400 mb-1">Password</label>
-            <input type="password" required value={password} onChange={e => setPassword(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/50 transition"
-              placeholder="••••••••"/>
-          </div>
-          {mode === 'signup' && (
-            <div>
-              <label className="block text-sm text-gray-400 mb-1">Minecraft Gamertag</label>
-              <input type="text" required value={gamertag} onChange={e => setGamertag(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/50 transition"
-                placeholder="YourGamertag"/>
-            </div>
-          )}
-          <button type="submit" disabled={loading}
-            className="w-full py-3 rounded-lg bg-orange-600 hover:bg-orange-500 disabled:opacity-50 text-white font-semibold transition-all animate-btn-press flex items-center justify-center gap-2">
-            {loading ? (
-              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"/>
-            ) : (
-              <>{mode === 'login' ? <LogIn size={18}/> : <UserPlus size={18}/>}
-                {mode === 'login' ? 'Login' : 'Create Account'}</>
-            )}
-          </button>
-        </form>
-        <p className="text-center text-gray-500 text-sm mt-4">
-          {mode === 'login' ? (
-            <>No account? <button onClick={() => setPage('signup')} className="text-orange-400 hover:underline">Sign up</button></>
-          ) : (
-            <>Already have an account? <button onClick={() => setPage('login')} className="text-orange-400 hover:underline">Login</button></>
-          )}
-        </p>
       </div>
     </div>
   );
@@ -475,9 +393,11 @@ function GamertagSetup({ user, onComplete, addToast }) {
     try {
       await setDoc(doc(db, 'users', user.id), {
         email: user.email,
+        displayName: user.displayName || '',
+        photoURL: user.photoURL || '',
         gamertag: gamertag.trim(),
         createdAt: new Date().toISOString(),
-      });
+      }, { merge: true });
       addToast('Profile created! Welcome to MalaySMP!', 'success');
       onComplete({ ...user, gamertag: gamertag.trim() });
     } catch {
@@ -518,23 +438,28 @@ function GamertagSetup({ user, onComplete, addToast }) {
 }
 
 // ─── Application Form ───
-function ApplicationForm({ user, addToast, setPage }) {
-  const [loading, setLoading] = useState(true);
+function ApplicationForm({ user, addToast, setPage, editData, onResubmit }) {
+  const [loading, setLoading] = useState(!editData);
   const [form, setForm] = useState({
     gamertag: user.gamertag || '',
-    discordId: '',
-    gender: '',
-    age: '',
-    socialMedia: '',
-    skinPreview: '',
-    rpInterest: '',
-    rpExplanation: '',
+    discordId: editData?.discordId || '',
+    gender: editData?.gender || '',
+    age: editData?.age || '',
+    socialMedia: editData?.socialMedia || '',
+    skinPreview: editData?.skinPreview || '',
+    rpInterest: editData?.rpInterest || '',
+    rpExplanation: editData?.rpExplanation || '',
     voiceCraftConfirm: false,
-    additionalMessage: '',
+    additionalMessage: editData?.additionalMessage || '',
   });
   const [submitted, setSubmitted] = useState(false);
+  const [skinError, setSkinError] = useState('');
+  const [voiceCraftClicked, setVoiceCraftClicked] = useState(false);
 
   useEffect(() => {
+    if (editData) {
+      return;
+    }
     (async () => {
       try {
         const q = query(collection(db, 'applications'), where('userId', '==', user.id));
@@ -547,59 +472,77 @@ function ApplicationForm({ user, addToast, setPage }) {
       }
       setLoading(false);
     })();
-  }, [user.id]);
-
-  const needsVerification = !user.emailVerified;
-  const [resending, setResending] = useState(false);
-
-  const resendVerification = async () => {
-    setResending(true);
-    try {
-      if (auth.currentUser) {
-        await sendEmailVerification(auth.currentUser);
-        addToast('Verification email sent! Check your inbox.', 'success');
-      }
-    } catch (err) {
-      console.error('Failed to send verification email:', err);
-      addToast('Could not send verification email. Try again later.', 'error');
-    }
-    setResending(false);
-  };
+  }, [user.id, editData]);
 
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    setSkinError('');
+    if (!file.name.toLowerCase().endsWith('.png') || file.type !== 'image/png') {
+      setSkinError('Invalid skin. Must be a 64×64 or 64×128 PNG file.');
+      e.target.value = '';
+      return;
+    }
     const reader = new FileReader();
-    reader.onload = (ev) => setForm(prev => ({ ...prev, skinPreview: ev.target.result }));
+    reader.onload = (ev) => {
+      const img = new window.Image();
+      img.onload = () => {
+        const valid = VALID_SKIN_DIMENSIONS.some(([w, h]) => img.width === w && img.height === h);
+        if (!valid) {
+          setSkinError('Invalid skin. Must be a 64×64 or 64×128 PNG file.');
+          setForm(prev => ({ ...prev, skinPreview: '' }));
+        } else {
+          setSkinError('');
+          setForm(prev => ({ ...prev, skinPreview: ev.target.result }));
+        }
+      };
+      img.onerror = () => {
+        setSkinError('Invalid skin. Must be a 64×64 or 64×128 PNG file.');
+      };
+      img.src = ev.target.result;
+    };
     reader.readAsDataURL(file);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (needsVerification) {
-      addToast('Please verify your email before submitting. Check your inbox.', 'error');
-      return;
-    }
     if (!form.discordId || !form.gender || !form.age || !form.rpInterest) {
       addToast('Please fill in all required fields.', 'error');
       return;
     }
+    if (!form.skinPreview) {
+      addToast('Please upload a valid Minecraft skin PNG file.', 'error');
+      return;
+    }
     if (!form.voiceCraftConfirm) {
-      addToast('You must confirm VoiceCraft download and microphone agreement.', 'error');
+      addToast('You must confirm VoiceCraft download and installation.', 'error');
       return;
     }
     try {
-      const appId = genId();
-      await setDoc(doc(db, 'applications', appId), {
-        id: appId,
-        userId: user.id,
-        email: user.email,
-        status: 'pending',
-        submittedAt: new Date().toISOString(),
-        ...form,
-      });
-      setSubmitted(true);
-      addToast('Your application has been submitted!', 'success');
+      if (editData && editData.appId) {
+        // Resubmission — update existing document
+        await updateDoc(doc(db, 'applications', editData.appId), {
+          ...form,
+          status: 'pending',
+          declineReason: '',
+          isResubmission: true,
+          submittedAt: serverTimestamp(),
+        });
+        addToast('Application resubmitted! Please wait for admin review.', 'success');
+        if (onResubmit) onResubmit();
+      } else {
+        const appId = genId();
+        await setDoc(doc(db, 'applications', appId), {
+          id: appId,
+          userId: user.id,
+          email: user.email,
+          status: 'pending',
+          submittedAt: serverTimestamp(),
+          ...form,
+        });
+        setSubmitted(true);
+        addToast('Your application has been submitted!', 'success');
+      }
     } catch {
       addToast('Failed to submit application. Please try again.', 'error');
     }
@@ -622,7 +565,7 @@ function ApplicationForm({ user, addToast, setPage }) {
     );
   }
 
-  if (submitted) {
+  if (submitted && !editData) {
     return (
       <div className="glass rounded-2xl p-8 text-center animate-fade-in">
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-orange-500/20 text-orange-400 mb-4">
@@ -642,22 +585,12 @@ function ApplicationForm({ user, addToast, setPage }) {
 
   return (
     <form onSubmit={handleSubmit} className="glass rounded-2xl p-6 md:p-8 animate-fade-in">
-      <h3 className="text-xl font-bold text-white mb-1">Server Application</h3>
-      <p className="text-gray-500 text-sm mb-6">Fill out all fields to apply for whitelist access.</p>
-
-      {needsVerification && (
-        <div className="mb-6 p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/30 flex flex-col sm:flex-row items-start sm:items-center gap-3">
-          <Mail size={20} className="text-yellow-400 flex-shrink-0 mt-0.5 sm:mt-0"/>
-          <div className="flex-1">
-            <p className="text-yellow-300 text-sm font-medium">Email not verified</p>
-            <p className="text-yellow-400/70 text-xs">You must verify your email before you can submit an application. Check your inbox for the verification link, then refresh this page. Can&apos;t find it? Check your <strong>Spam</strong> or <strong>Junk</strong> folder.</p>
-          </div>
-          <button type="button" onClick={resendVerification} disabled={resending}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30 transition-all text-xs font-medium whitespace-nowrap disabled:opacity-50">
-            <RefreshCw size={12} className={resending ? 'animate-spin' : ''}/> Resend Email
-          </button>
-        </div>
-      )}
+      <h3 className="text-xl font-bold text-white mb-1">
+        {editData ? 'Edit & Resubmit Application' : 'Server Application'}
+      </h3>
+      <p className="text-gray-500 text-sm mb-6">
+        {editData ? 'Update your answers and resubmit for review.' : 'Fill out all fields to apply for whitelist access.'}
+      </p>
 
       <div className="grid md:grid-cols-2 gap-4 mb-4">
         <div>
@@ -666,14 +599,14 @@ function ApplicationForm({ user, addToast, setPage }) {
             className="w-full px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white/60 cursor-not-allowed"/>
         </div>
         <div>
-          <label className="block text-sm text-gray-400 mb-1">Discord ID</label>
+          <label className="block text-sm text-gray-400 mb-1">Discord ID <span className="text-red-400">*</span></label>
           <input type="text" value={form.discordId}
             onChange={e => setForm({...form, discordId: e.target.value})}
             className="w-full px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/50 transition"
             placeholder="username#1234"/>
         </div>
         <div>
-          <label className="block text-sm text-gray-400 mb-1">Gender</label>
+          <label className="block text-sm text-gray-400 mb-1">Gender <span className="text-red-400">*</span></label>
           <select value={form.gender}
             onChange={e => setForm({...form, gender: e.target.value})}
             className="w-full px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:border-orange-500/50 transition">
@@ -685,7 +618,7 @@ function ApplicationForm({ user, addToast, setPage }) {
           </select>
         </div>
         <div>
-          <label className="block text-sm text-gray-400 mb-1">Age</label>
+          <label className="block text-sm text-gray-400 mb-1">Age <span className="text-red-400">*</span></label>
           <input type="number" min="13" max="99" value={form.age}
             onChange={e => setForm({...form, age: e.target.value})}
             className="w-full px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/50 transition"
@@ -702,21 +635,24 @@ function ApplicationForm({ user, addToast, setPage }) {
 
       {/* Skin upload */}
       <div className="mb-4">
-        <label className="block text-sm text-gray-400 mb-1">Minecraft Skin (Image Upload)</label>
+        <label className="block text-sm text-gray-400 mb-1">Minecraft Skin (PNG Upload) <span className="text-red-400">*</span></label>
         <div className="flex items-center gap-4">
           <label className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-gray-300 hover:border-orange-500/50 cursor-pointer transition text-sm">
-            <Upload size={16}/> Choose File
-            <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload}/>
+            <Upload size={16}/> Choose .png File
+            <input type="file" accept=".png,image/png" className="hidden" onChange={handleFileUpload}/>
           </label>
           {form.skinPreview && (
-            <img src={form.skinPreview} alt="Skin preview" className="w-12 h-12 rounded-lg object-cover border border-white/10"/>
+            <img src={form.skinPreview} alt="Skin preview" className="w-16 h-16 rounded-lg border border-white/10 pixel-art"/>
           )}
         </div>
+        {skinError && (
+          <p className="text-red-400 text-xs mt-1">{skinError}</p>
+        )}
       </div>
 
       {/* RP Interest */}
       <div className="mb-4">
-        <label className="block text-sm text-gray-400 mb-1">Are you interested in Roleplay?</label>
+        <label className="block text-sm text-gray-400 mb-1">Are you interested in Roleplay? <span className="text-red-400">*</span></label>
         <div className="flex gap-4 mb-2">
           {['Yes', 'No'].map(opt => (
             <label key={opt} className="flex items-center gap-2 cursor-pointer">
@@ -734,18 +670,29 @@ function ApplicationForm({ user, addToast, setPage }) {
           rows={2} placeholder="Briefly explain your roleplay interest..."/>
       </div>
 
-      {/* VoiceCraft checkbox */}
-      <div className="mb-4 p-4 rounded-lg bg-orange-500/5 border border-orange-500/20">
-        <label className="flex items-start gap-3 cursor-pointer">
+      {/* VoiceCraft Section */}
+      <div className="mb-4 p-4 rounded-lg bg-orange-500/5 border border-orange-500/20 space-y-3">
+        <div className="flex items-center gap-2 mb-1">
+          <Mic size={18} className="text-orange-400"/>
+          <h4 className="text-sm font-semibold text-white">VoiceCraft — Voice Proximity Chat</h4>
+        </div>
+        <p className="text-xs text-gray-400">
+          VoiceCraft adds proximity voice chat to Minecraft Bedrock. Players near you can hear you speak in real-time — this is <strong className="text-gray-300">required</strong> for our server&apos;s immersive roleplay experience. You must download and install it before joining.
+        </p>
+        <a href={VOICECRAFT_LINK} target="_blank" rel="noopener noreferrer"
+          onClick={() => setVoiceCraftClicked(true)}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-orange-600/20 text-orange-400 hover:bg-orange-600/30 transition-all text-sm font-medium animate-btn-press">
+          <Download size={16}/> Download VoiceCraft
+        </a>
+        {voiceCraftClicked && (
+          <p className="text-xs text-emerald-400">✓ Download link opened</p>
+        )}
+        <label className="flex items-start gap-3 cursor-pointer pt-1">
           <input type="checkbox" checked={form.voiceCraftConfirm}
             onChange={e => setForm({...form, voiceCraftConfirm: e.target.checked})}
             className="mt-1 accent-orange-500"/>
           <span className="text-sm text-gray-300">
-            I confirm I have downloaded{' '}
-            <a href={VOICECRAFT_LINK} target="_blank" rel="noopener noreferrer" className="text-orange-400 hover:underline">
-              VoiceCraft (Voice Proximity for Bedrock)
-            </a>{' '}
-            and I agree to use a microphone in-server.
+            I have downloaded and installed VoiceCraft
           </span>
         </label>
       </div>
@@ -761,7 +708,7 @@ function ApplicationForm({ user, addToast, setPage }) {
 
       <button type="submit"
         className="w-full py-3 rounded-lg bg-orange-600 hover:bg-orange-500 text-white font-semibold transition-all animate-btn-press flex items-center justify-center gap-2">
-        <Send size={18}/> Submit Application
+        <Send size={18}/> {editData ? 'Resubmit Application' : 'Submit Application'}
       </button>
     </form>
   );
@@ -791,9 +738,10 @@ function Dashboard({ user, addToast, setPage }) {
 }
 
 // ─── Application Status Page ───
-function StatusPage({ user }) {
+function StatusPage({ user, setPage, addToast }) {
   const [myApp, setMyApp] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(false);
 
   useEffect(() => {
     const q = query(collection(db, 'applications'), where('userId', '==', user.id));
@@ -808,10 +756,46 @@ function StatusPage({ user }) {
     return unsub;
   }, [user.id]);
 
+  const formatDate = (ts) => {
+    if (!ts) return 'N/A';
+    const d = ts.toDate ? ts.toDate() : new Date(ts);
+    return d.toLocaleString();
+  };
+
+  if (editing && myApp) {
+    return (
+      <div className="min-h-screen pt-24 pb-12 px-4 max-w-4xl mx-auto">
+        <div className="animate-fade-in">
+          <button onClick={() => setEditing(false)}
+            className="flex items-center gap-1.5 text-gray-400 hover:text-white mb-4 text-sm transition-colors">
+            <ChevronRight size={16} className="rotate-180"/> Back to Status
+          </button>
+          <ApplicationForm
+            user={user}
+            addToast={addToast}
+            setPage={setPage}
+            editData={{
+              appId: myApp.id,
+              discordId: myApp.discordId || '',
+              gender: myApp.gender || '',
+              age: myApp.age || '',
+              socialMedia: myApp.socialMedia || '',
+              skinPreview: myApp.skinPreview || '',
+              rpInterest: myApp.rpInterest || '',
+              rpExplanation: myApp.rpExplanation || '',
+              additionalMessage: myApp.additionalMessage || '',
+            }}
+            onResubmit={() => setEditing(false)}
+          />
+        </div>
+      </div>
+    );
+  }
+
   const statusConfig = {
     pending: { icon: <Clock size={32}/>, color: 'text-yellow-400', bg: 'bg-yellow-500/10', label: 'Pending Review', desc: 'Your application is being reviewed by our admins.' },
     accepted: { icon: <CheckCircle size={32}/>, color: 'text-emerald-400', bg: 'bg-emerald-500/10', label: 'Accepted!', desc: 'Congratulations! You have been whitelisted. Check Discord for server details.' },
-    declined: { icon: <XCircle size={32}/>, color: 'text-red-400', bg: 'bg-red-500/10', label: 'Declined', desc: 'Unfortunately your application was declined. You may contact admin for details.' },
+    declined: { icon: <XCircle size={32}/>, color: 'text-red-400', bg: 'bg-red-500/10', label: 'Declined', desc: 'Unfortunately your application was declined.' },
   };
 
   return (
@@ -832,17 +816,46 @@ function StatusPage({ user }) {
         ) : myApp ? (() => {
           const cfg = statusConfig[myApp.status];
           return (
-            <div className="glass rounded-2xl p-8 text-center">
-              <div className={`inline-flex items-center justify-center w-16 h-16 rounded-full ${cfg.bg} ${cfg.color} mb-4`}>
-                {cfg.icon}
+            <div className="space-y-4">
+              <div className="glass rounded-2xl p-8 text-center">
+                <div className={`inline-flex items-center justify-center w-16 h-16 rounded-full ${cfg.bg} ${cfg.color} mb-4`}>
+                  {cfg.icon}
+                </div>
+                <h2 className={`text-2xl font-bold ${cfg.color} mb-2`}>{cfg.label}</h2>
+                <p className="text-gray-400 mb-6">{cfg.desc}</p>
+                <div className="glass rounded-xl p-4 text-left space-y-2 text-sm">
+                  <div className="flex justify-between"><span className="text-gray-500">Gamertag:</span><span className="text-white">{myApp.gamertag}</span></div>
+                  <div className="flex justify-between"><span className="text-gray-500">Discord:</span><span className="text-white">{myApp.discordId}</span></div>
+                  <div className="flex justify-between"><span className="text-gray-500">Submitted:</span><span className="text-white">{formatDate(myApp.submittedAt)}</span></div>
+                </div>
               </div>
-              <h2 className={`text-2xl font-bold ${cfg.color} mb-2`}>{cfg.label}</h2>
-              <p className="text-gray-400 mb-6">{cfg.desc}</p>
-              <div className="glass rounded-xl p-4 text-left space-y-2 text-sm">
-                <div className="flex justify-between"><span className="text-gray-500">Gamertag:</span><span className="text-white">{myApp.gamertag}</span></div>
-                <div className="flex justify-between"><span className="text-gray-500">Discord:</span><span className="text-white">{myApp.discordId}</span></div>
-                <div className="flex justify-between"><span className="text-gray-500">Submitted:</span><span className="text-white">{new Date(myApp.submittedAt).toLocaleDateString()}</span></div>
-              </div>
+
+              {/* Accepted congratulations */}
+              {myApp.status === 'accepted' && (
+                <div className="rounded-xl p-4 bg-emerald-500/10 border border-emerald-500/30 text-center">
+                  <CheckCircle size={24} className="text-emerald-400 mx-auto mb-2"/>
+                  <p className="text-emerald-300 font-semibold">🎉 Congratulations! You&apos;re whitelisted!</p>
+                  <p className="text-emerald-400/70 text-sm mt-1">Welcome to the server. Check Discord for connection details and rules.</p>
+                </div>
+              )}
+
+              {/* Declined with reason */}
+              {myApp.status === 'declined' && (
+                <>
+                  <div className="rounded-xl p-4 bg-red-500/10 border border-red-500/30">
+                    <p className="text-red-300 font-semibold mb-1">Your application was declined.</p>
+                    {myApp.declineReason ? (
+                      <p className="text-red-400/80 text-sm">Reason: {myApp.declineReason}</p>
+                    ) : (
+                      <p className="text-red-400/60 text-sm">No specific reason was provided.</p>
+                    )}
+                  </div>
+                  <button onClick={() => setEditing(true)}
+                    className="w-full py-3 rounded-lg bg-orange-600 hover:bg-orange-500 text-white font-semibold transition-all animate-btn-press flex items-center justify-center gap-2">
+                    <Edit size={18}/> Edit &amp; Resubmit
+                  </button>
+                </>
+              )}
             </div>
           );
         })() : (
@@ -1099,12 +1112,32 @@ function ProfilePage({ user, addToast, setPage, onProfileUpdate }) {
   );
 }
 
+
+// ─── Relative time helper ───
+function timeAgo(ts) {
+  if (!ts) return '';
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  const diff = Math.floor((Date.now() - d.getTime()) / 1000);
+  if (diff < 60) return 'just now';
+  if (diff < 3600) return `${Math.floor(diff / 60)} min ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)} hours ago`;
+  if (diff < 2592000) return `${Math.floor(diff / 86400)} days ago`;
+  return d.toLocaleDateString();
+}
+
+function formatTimestamp(ts) {
+  if (!ts) return 'N/A';
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  return d.toLocaleString();
+}
+
 // ─── Admin Panel ───
 function AdminPanel({ addToast }) {
   const [apps, setApps] = useState([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortOrder, setSortOrder] = useState('newest');
 
   // Site settings state
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -1123,6 +1156,10 @@ function AdminPanel({ addToast }) {
   // Reset modal
   const [showResetModal, setShowResetModal] = useState(false);
   const [resetConfirm, setResetConfirm] = useState('');
+
+  // Decline modal
+  const [declineTarget, setDeclineTarget] = useState(null);
+  const [declineReason, setDeclineReason] = useState('');
 
   // Load site settings
   useEffect(() => {
@@ -1156,6 +1193,21 @@ function AdminPanel({ addToast }) {
     }
   };
 
+  const handleDeclineConfirm = async () => {
+    if (!declineTarget) return;
+    try {
+      await updateDoc(doc(db, 'applications', declineTarget), {
+        status: 'declined',
+        declineReason: declineReason,
+      });
+      addToast('Application declined ❌', 'error');
+    } catch {
+      addToast('Failed to decline application.', 'error');
+    }
+    setDeclineTarget(null);
+    setDeclineReason('');
+  };
+
   // Site settings handlers
   const handleSaveSettings = async () => {
     setSettingsSaving(true);
@@ -1184,17 +1236,22 @@ function AdminPanel({ addToast }) {
     setBgUploading(false);
   };
 
-  // Reset all applications
+  // Reset all applications — supports >500 docs with multiple batches
   const handleResetAll = async () => {
     if (resetConfirm !== 'RESET') return;
     try {
       const snap = await getDocs(collection(db, 'applications'));
-      const batch = writeBatch(db);
-      snap.docs.forEach(d => batch.delete(d.ref));
-      await batch.commit();
-      addToast('All applications have been reset.', 'success');
-    } catch {
-      addToast('Failed to reset applications.', 'error');
+      const docs = snap.docs;
+      // Split into batches of 500 (Firestore limit)
+      for (let i = 0; i < docs.length; i += FIRESTORE_BATCH_LIMIT) {
+        const batch = writeBatch(db);
+        const chunk = docs.slice(i, i + FIRESTORE_BATCH_LIMIT);
+        chunk.forEach(d => batch.delete(d.ref));
+        await batch.commit();
+      }
+      addToast(`All ${docs.length} applications have been reset.`, 'success');
+    } catch (err) {
+      addToast(`Failed to reset applications: ${err.message || 'Unknown error'}`, 'error');
     }
     setShowResetModal(false);
     setResetConfirm('');
@@ -1209,7 +1266,7 @@ function AdminPanel({ addToast }) {
     const headers = ['Gamertag', 'Email', 'Discord', 'Age', 'Gender', 'Status', 'Social Media', 'RP Interest', 'Submitted'];
     const rows = apps.map(a => [
       a.gamertag, a.email, a.discordId, a.age, a.gender, a.status,
-      a.socialMedia || '', a.rpInterest, a.submittedAt,
+      a.socialMedia || '', a.rpInterest, formatTimestamp(a.submittedAt),
     ]);
     const csv = [
       headers.join(','),
@@ -1226,17 +1283,27 @@ function AdminPanel({ addToast }) {
     addToast('CSV exported!', 'success');
   };
 
-  const filteredApps = apps.filter(a => {
-    const matchesTab = tab === 'all' ? true :
-      tab === 'pending' ? a.status === 'pending' :
-      tab === 'accepted' ? a.status === 'accepted' :
-      tab === 'declined' ? a.status === 'declined' : true;
-    const matchesSearch = searchQuery === '' ||
-      a.gamertag?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      a.discordId?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      a.email?.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesTab && matchesSearch;
-  });
+  const filteredApps = apps
+    .filter(a => {
+      const matchesTab = tab === 'all' ? true :
+        tab === 'pending' ? a.status === 'pending' :
+        tab === 'accepted' ? a.status === 'accepted' :
+        tab === 'declined' ? a.status === 'declined' : true;
+      const matchesSearch = searchQuery === '' ||
+        a.gamertag?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        a.discordId?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        a.email?.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesTab && matchesSearch;
+    })
+    .sort((a, b) => {
+      const getTime = (ts) => {
+        if (!ts) return 0;
+        return ts.toDate ? ts.toDate().getTime() : new Date(ts).getTime();
+      };
+      return sortOrder === 'newest'
+        ? getTime(b.submittedAt) - getTime(a.submittedAt)
+        : getTime(a.submittedAt) - getTime(b.submittedAt);
+    });
 
   const stats = {
     total: apps.length,
@@ -1424,7 +1491,7 @@ function AdminPanel({ addToast }) {
           ))}
         </div>
 
-        {/* Search and tabs */}
+        {/* Search, tabs, and sort */}
         <div className="flex flex-col md:flex-row gap-3 mb-6">
           <div className="relative flex-1">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"/>
@@ -1445,6 +1512,10 @@ function AdminPanel({ addToast }) {
               </button>
             ))}
           </div>
+          <button onClick={() => setSortOrder(prev => prev === 'newest' ? 'oldest' : 'newest')}
+            className="flex items-center gap-1.5 px-3 py-1.5 glass rounded-lg text-sm text-gray-400 hover:text-white transition-all">
+            <ArrowUpDown size={14}/> {sortOrder === 'newest' ? 'Newest' : 'Oldest'}
+          </button>
         </div>
 
         {/* Application cards */}
@@ -1461,7 +1532,7 @@ function AdminPanel({ addToast }) {
                   {/* Skin preview */}
                   <div className="flex-shrink-0">
                     {app.skinPreview ? (
-                      <img src={app.skinPreview} alt="Skin" className="w-16 h-16 rounded-lg object-cover border border-white/10"/>
+                      <img src={app.skinPreview} alt="Skin" className="w-16 h-16 rounded-lg border border-white/10 pixel-art"/>
                     ) : (
                       <div className="w-16 h-16 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-gray-600">
                         <Gamepad2 size={24}/>
@@ -1471,7 +1542,7 @@ function AdminPanel({ addToast }) {
 
                   {/* Info */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
                       <h3 className="text-lg font-semibold text-white">{app.gamertag}</h3>
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                         app.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' :
@@ -1480,6 +1551,14 @@ function AdminPanel({ addToast }) {
                       }`}>
                         {app.status.charAt(0).toUpperCase() + app.status.slice(1)}
                       </span>
+                      {app.isResubmission && (
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-500/20 text-blue-400">
+                          Resubmission
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-xs text-gray-500 mb-2">
+                      Submitted: {formatTimestamp(app.submittedAt)} · {timeAgo(app.submittedAt)}
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-1 text-sm mb-3">
                       <span className="text-gray-500">Discord: <span className="text-gray-300">{app.discordId}</span></span>
@@ -1495,6 +1574,9 @@ function AdminPanel({ addToast }) {
                     {app.additionalMessage && (
                       <p className="text-sm text-gray-400"><span className="text-gray-500">Message:</span> {app.additionalMessage}</p>
                     )}
+                    {app.declineReason && (
+                      <p className="text-sm text-red-400 mt-1"><span className="text-red-500">Decline Reason:</span> {app.declineReason}</p>
+                    )}
                   </div>
 
                   {/* Actions */}
@@ -1504,7 +1586,7 @@ function AdminPanel({ addToast }) {
                         className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30 transition-all text-sm font-medium animate-btn-press">
                         <Check size={16}/> Accept
                       </button>
-                      <button onClick={() => updateStatus(app.id, 'declined')}
+                      <button onClick={() => { setDeclineTarget(app.id); setDeclineReason(''); }}
                         className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-red-600/20 text-red-400 hover:bg-red-600/30 transition-all text-sm font-medium animate-btn-press">
                         <XCircle size={16}/> Decline
                       </button>
@@ -1541,6 +1623,98 @@ function AdminPanel({ addToast }) {
                 </button>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Decline Reason Modal */}
+        {declineTarget && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+            <div className="w-full max-w-md glass rounded-2xl p-8 animate-fade-in">
+              <h3 className="text-xl font-bold text-red-400 mb-2">Decline Application</h3>
+              <p className="text-gray-400 text-sm mb-4">
+                Provide a reason for declining. This will be visible to the applicant.
+              </p>
+              <textarea value={declineReason} onChange={e => setDeclineReason(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-600 focus:outline-none focus:border-red-500/50 transition text-sm mb-4"
+                rows={4} placeholder="Reason for declining (optional)..."/>
+              <div className="flex gap-3">
+                <button onClick={() => { setDeclineTarget(null); setDeclineReason(''); }}
+                  className="flex-1 py-2.5 rounded-lg glass glass-hover text-gray-300 font-medium transition-all text-sm">
+                  Cancel
+                </button>
+                <button onClick={handleDeclineConfirm}
+                  className="flex-1 py-2.5 rounded-lg bg-red-600 hover:bg-red-500 text-white font-medium transition-all text-sm">
+                  Confirm Decline
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Members Page (Public) ───
+function MembersPage() {
+  const [members, setMembers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const q = query(collection(db, 'applications'), where('status', '==', 'accepted'));
+        const snap = await getDocs(q);
+        setMembers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      } catch (err) {
+        console.error('Failed to load members:', err);
+      }
+      setLoading(false);
+    })();
+  }, []);
+
+  return (
+    <div className="min-h-screen pt-24 pb-12 px-4 max-w-6xl mx-auto">
+      <div className="animate-fade-in">
+        <div className="text-center mb-10">
+          <h1 className="text-3xl font-bold text-white mb-2 flex items-center justify-center gap-3">
+            <Users size={28} className="text-orange-400"/> Server Members
+          </h1>
+          <p className="text-gray-500">Players who have been accepted into the server.</p>
+        </div>
+
+        {loading ? (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[1,2,3,4,5,6].map(i => (
+              <div key={i} className="glass rounded-xl p-6 space-y-3">
+                <Skeleton className="h-16 w-16 rounded-lg mx-auto"/>
+                <Skeleton className="h-5 w-32 mx-auto"/>
+                <Skeleton className="h-4 w-24 mx-auto"/>
+              </div>
+            ))}
+          </div>
+        ) : members.length === 0 ? (
+          <div className="glass rounded-2xl p-12 text-center">
+            <Users size={32} className="mx-auto mb-3 text-gray-600"/>
+            <p className="text-gray-500">No accepted members yet.</p>
+          </div>
+        ) : (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {members.map(m => (
+              <div key={m.id} className="glass glass-hover rounded-xl p-6 text-center transition-all">
+                {m.skinPreview ? (
+                  <img src={m.skinPreview} alt={m.gamertag} className="w-16 h-16 rounded-lg mx-auto mb-3 border border-white/10 pixel-art"/>
+                ) : (
+                  <div className="w-16 h-16 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-gray-600 mx-auto mb-3">
+                    <Gamepad2 size={28}/>
+                  </div>
+                )}
+                <h3 className="text-white font-semibold text-lg">{m.gamertag}</h3>
+                <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-400">
+                  Whitelisted
+                </span>
+              </div>
+            ))}
           </div>
         )}
       </div>
@@ -1580,6 +1754,8 @@ export default function App() {
             const u = {
               id: firebaseUser.uid,
               email: firebaseUser.email,
+              displayName: firebaseUser.displayName || profile.displayName || '',
+              photoURL: firebaseUser.photoURL || profile.photoURL || '',
               gamertag: profile.gamertag || 'Player',
               emailVerified: firebaseUser.emailVerified,
               isAdmin: firebaseUser.email === ADMIN_EMAIL,
@@ -1590,6 +1766,8 @@ export default function App() {
             setUser({
               id: firebaseUser.uid,
               email: firebaseUser.email,
+              displayName: firebaseUser.displayName || '',
+              photoURL: firebaseUser.photoURL || '',
               gamertag: '',
               emailVerified: firebaseUser.emailVerified,
               isAdmin: firebaseUser.email === ADMIN_EMAIL,
@@ -1627,11 +1805,6 @@ export default function App() {
       setTransitioning(false);
     }, 200);
   }, []);
-
-  const handleAuth = useCallback((u) => {
-    setUser(u);
-    navigate(u.email === ADMIN_EMAIL ? 'admin' : 'dashboard');
-  }, [navigate]);
 
   const handleGamertagComplete = useCallback((u) => {
     setUser(u);
@@ -1675,11 +1848,11 @@ export default function App() {
   const renderPage = () => {
     switch (page) {
       case 'landing': return <LandingPage setPage={navigate} siteSettings={siteSettings}/>;
-      case 'login': return <AuthPage mode="login" setPage={navigate} onAuth={handleAuth} addToast={addToast}/>;
-      case 'signup': return <AuthPage mode="signup" setPage={navigate} onAuth={handleAuth} addToast={addToast}/>;
+      case 'login': return <AuthPage addToast={addToast}/>;
+      case 'members': return <MembersPage/>;
       case 'setup-gamertag': return user ? <GamertagSetup user={user} onComplete={handleGamertagComplete} addToast={addToast}/> : <LandingPage setPage={navigate} siteSettings={siteSettings}/>;
       case 'dashboard': return user ? <Dashboard user={user} addToast={addToast} setPage={navigate}/> : <LandingPage setPage={navigate} siteSettings={siteSettings}/>;
-      case 'status': return user ? <StatusPage user={user}/> : <LandingPage setPage={navigate} siteSettings={siteSettings}/>;
+      case 'status': return user ? <StatusPage user={user} setPage={navigate} addToast={addToast}/> : <LandingPage setPage={navigate} siteSettings={siteSettings}/>;
       case 'profile': return user ? <ProfilePage user={user} addToast={addToast} setPage={navigate} onProfileUpdate={handleProfileUpdate}/> : <LandingPage setPage={navigate} siteSettings={siteSettings}/>;
       case 'admin': return user?.email === ADMIN_EMAIL ? <AdminPanel addToast={addToast}/> : <LandingPage setPage={navigate} siteSettings={siteSettings}/>;
       default: return <LandingPage setPage={navigate} siteSettings={siteSettings}/>;
