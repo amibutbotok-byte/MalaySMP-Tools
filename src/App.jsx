@@ -32,6 +32,7 @@ const VOICECRAFT_LINK = 'https://github.com/AvionBlock/VoiceCraft/releases/tag/v
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || '';
 const MIN_DECLINE_REASON_LENGTH = 10;
 const FIRESTORE_BATCH_LIMIT = 500;
+const VALID_SKIN_DIMENSIONS = [[64, 64], [64, 128]];
 
 // ─── Helpers ───
 function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
@@ -487,7 +488,7 @@ function ApplicationForm({ user, addToast, setPage, editData, onResubmit }) {
     reader.onload = (ev) => {
       const img = new window.Image();
       img.onload = () => {
-        const valid = (img.width === 64 && img.height === 64) || (img.width === 64 && img.height === 128);
+        const valid = VALID_SKIN_DIMENSIONS.some(([w, h]) => img.width === w && img.height === h);
         if (!valid) {
           setSkinError('Invalid skin. Must be a 64×64 or 64×128 PNG file.');
           setForm(prev => ({ ...prev, skinPreview: '' }));
@@ -642,7 +643,7 @@ function ApplicationForm({ user, addToast, setPage, editData, onResubmit }) {
             <input type="file" accept=".png,image/png" className="hidden" onChange={handleFileUpload}/>
           </label>
           {form.skinPreview && (
-            <img src={form.skinPreview} alt="Skin preview" className="w-16 h-16 rounded-lg border border-white/10" style={{ imageRendering: 'pixelated' }}/>
+            <img src={form.skinPreview} alt="Skin preview" className="w-16 h-16 rounded-lg border border-white/10 pixel-art"/>
           )}
         </div>
         {skinError && (
@@ -1194,7 +1195,10 @@ function AdminPanel({ addToast }) {
   };
 
   const handleDeclineConfirm = async () => {
-    if (!declineTarget || declineReason.length < MIN_DECLINE_REASON_LENGTH) return;
+    if (!declineTarget || declineReason.length < MIN_DECLINE_REASON_LENGTH) {
+      addToast(`Please write at least ${MIN_DECLINE_REASON_LENGTH} characters for the decline reason.`, 'error');
+      return;
+    }
     try {
       await updateDoc(doc(db, 'applications', declineTarget), {
         status: 'declined',
@@ -1532,7 +1536,7 @@ function AdminPanel({ addToast }) {
                   {/* Skin preview */}
                   <div className="flex-shrink-0">
                     {app.skinPreview ? (
-                      <img src={app.skinPreview} alt="Skin" className="w-16 h-16 rounded-lg border border-white/10" style={{ imageRendering: 'pixelated' }}/>
+                      <img src={app.skinPreview} alt="Skin" className="w-16 h-16 rounded-lg border border-white/10 pixel-art"/>
                     ) : (
                       <div className="w-16 h-16 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-gray-600">
                         <Gamepad2 size={24}/>
@@ -1704,7 +1708,7 @@ function MembersPage() {
             {members.map(m => (
               <div key={m.id} className="glass glass-hover rounded-xl p-6 text-center transition-all">
                 {m.skinPreview ? (
-                  <img src={m.skinPreview} alt={m.gamertag} className="w-16 h-16 rounded-lg mx-auto mb-3 border border-white/10" style={{ imageRendering: 'pixelated' }}/>
+                  <img src={m.skinPreview} alt={m.gamertag} className="w-16 h-16 rounded-lg mx-auto mb-3 border border-white/10 pixel-art"/>
                 ) : (
                   <div className="w-16 h-16 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-gray-600 mx-auto mb-3">
                     <Gamepad2 size={28}/>
