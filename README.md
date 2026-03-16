@@ -67,9 +67,10 @@ service cloud.firestore {
     }
 
     // Applications — authenticated users can create & read their own,
-    // admin can read/update all
+    // admin can read/update all, anyone can read accepted applications
     match /applications/{appId} {
       allow create: if request.auth != null;
+      allow read:   if resource.data.status == "accepted";
       allow read:   if request.auth != null
                     && (resource.data.userId == request.auth.uid
                         || request.auth.token.email == 'YOUR_ADMIN_EMAIL_HERE');
