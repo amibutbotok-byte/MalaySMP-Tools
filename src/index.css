@@ -1,7 +1,10 @@
 @import "tailwindcss";
 
 @theme {
-  --color-emerald-glow: #10b981;
+  --color-fire-glow: #f97316;
+  --color-fire-light: #fb923c;
+  --color-lava-glow: #facc15;
+  --color-lava-light: #fbbf24;
   --color-dark-bg: #0a0a0a;
   --color-dark-card: #111111;
   --color-dark-surface: #1a1a1a;
@@ -14,8 +17,8 @@
 }
 
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 5px rgba(16, 185, 129, 0.3); }
-  50% { box-shadow: 0 0 20px rgba(16, 185, 129, 0.6); }
+  0%, 100% { box-shadow: 0 0 5px rgba(249, 115, 22, 0.3); }
+  50% { box-shadow: 0 0 20px rgba(249, 115, 22, 0.6); }
 }
 
 @keyframes fade-in {
@@ -31,14 +34,52 @@
 @keyframes particle-float {
   0% { transform: translateY(100vh) scale(0); opacity: 0; }
   10% { opacity: 1; }
-  90% { opacity: 1; }
-  100% { transform: translateY(-10vh) scale(1); opacity: 0; }
+  90% { opacity: 0.6; }
+  100% { transform: translateY(-10vh) scale(1.2); opacity: 0; }
+}
+
+@keyframes ember-drift {
+  0% { transform: translateY(0) translateX(0) scale(1); opacity: 0.8; }
+  25% { transform: translateY(-25vh) translateX(10px) scale(0.9); opacity: 0.6; }
+  50% { transform: translateY(-50vh) translateX(-8px) scale(0.7); opacity: 0.4; }
+  75% { transform: translateY(-75vh) translateX(5px) scale(0.5); opacity: 0.2; }
+  100% { transform: translateY(-100vh) translateX(0) scale(0.3); opacity: 0; }
+}
+
+@keyframes slide-in-right {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slide-out-right {
+  from { transform: translateX(0); opacity: 1; }
+  to { transform: translateX(100%); opacity: 0; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes btn-press {
+  0% { transform: scale(1); }
+  50% { transform: scale(0.97); }
+  100% { transform: scale(1); }
 }
 
 .animate-float { animation: float 3s ease-in-out infinite; }
 .animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
 .animate-fade-in { animation: fade-in 0.6s ease-out forwards; }
 .animate-slide-up { animation: slide-up 0.8s ease-out forwards; }
+.animate-slide-in { animation: slide-in-right 0.3s ease-out forwards; }
+.animate-btn-press:active { animation: btn-press 0.15s ease-out; }
+
+.skeleton {
+  background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 0.5rem;
+}
 
 .glass {
   background: rgba(17, 17, 17, 0.7);
@@ -48,7 +89,7 @@
 
 .glass-hover:hover {
   background: rgba(17, 17, 17, 0.85);
-  border-color: rgba(16, 185, 129, 0.3);
+  border-color: rgba(249, 115, 22, 0.3);
 }
 
 body {
