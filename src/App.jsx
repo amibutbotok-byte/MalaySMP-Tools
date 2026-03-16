@@ -5,7 +5,7 @@ import {
   XCircle, Clock, Search, Bell, Eye, Gamepad2, Mic, Globe, Filter,
   Home, FileText, Settings, CheckCircle, AlertCircle, Sparkles,
   RefreshCw, Trash2, Download, Palette, Image, User, Megaphone, Type,
-  ArrowUpDown, Edit,
+  ArrowUpDown, Edit, LayoutDashboard, Link2,
 } from 'lucide-react';
 import {
   auth, db, storage,
@@ -105,10 +105,8 @@ function Navbar({ page, setPage, user, onLogout }) {
       { label: 'Members', icon: <Users size={16}/>, page: 'members' },
     ] : [
       { label: 'Home', icon: <Home size={16}/>, page: 'landing' },
-      { label: 'Dashboard', icon: <Gamepad2 size={16}/>, page: 'dashboard' },
-      { label: 'My Status', icon: <FileText size={16}/>, page: 'status' },
+      { label: 'Dashboard', icon: <LayoutDashboard size={16}/>, page: 'dashboard' },
       { label: 'Profile', icon: <User size={16}/>, page: 'profile' },
-      { label: 'Members', icon: <Users size={16}/>, page: 'members' },
     ]
   ) : [
     { label: 'Home', icon: <Home size={16}/>, page: 'landing' },
@@ -195,7 +193,7 @@ function SocialBar() {
 }
 
 // ─── Landing Page ───
-function LandingPage({ setPage, siteSettings }) {
+function LandingPage({ setPage, siteSettings, user }) {
   const serverName = siteSettings?.serverName || 'MalaySMP';
   const tagline = siteSettings?.tagline || 'Private Minecraft Roleplay Server';
   const description = siteSettings?.description ||
@@ -236,9 +234,9 @@ function LandingPage({ setPage, siteSettings }) {
             {description}
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <button onClick={() => setPage('login')}
+            <button onClick={() => setPage(user ? 'dashboard' : 'login')}
               className="px-8 py-3 rounded-lg bg-orange-600 hover:bg-orange-500 text-white font-semibold transition-all animate-pulse-glow animate-btn-press flex items-center justify-center gap-2">
-              <LogIn size={18}/> Apply Now
+              {user ? <><Send size={18}/> Go to Dashboard</> : <><LogIn size={18}/> Apply Now</>}
             </button>
             <button onClick={() => setPage('members')}
               className="px-8 py-3 rounded-lg glass glass-hover text-gray-300 hover:text-white font-semibold transition-all animate-btn-press flex items-center justify-center gap-2">
@@ -291,10 +289,12 @@ function LandingPage({ setPage, siteSettings }) {
       <section className="max-w-4xl mx-auto px-4 py-20 text-center">
         <div className="glass rounded-2xl p-10">
           <h2 className="text-3xl font-bold text-white mb-3">Ready to Begin Your Story?</h2>
-          <p className="text-gray-400 mb-6">Create an account and submit your application to join the server.</p>
-          <button onClick={() => setPage('login')}
+          <p className="text-gray-400 mb-6">
+            {user ? 'Head to your dashboard to submit your application and join the server.' : 'Create an account and submit your application to join the server.'}
+          </p>
+          <button onClick={() => setPage(user ? 'dashboard' : 'login')}
             className="px-8 py-3 rounded-lg bg-orange-600 hover:bg-orange-500 text-white font-semibold transition-all animate-btn-press inline-flex items-center gap-2">
-            Sign In with Google to Apply <ChevronRight size={18}/>
+            {user ? <><LayoutDashboard size={18}/> Go to Dashboard <ChevronRight size={18}/></> : <>Sign In with Google to Apply <ChevronRight size={18}/></>}
           </button>
         </div>
       </section>
@@ -719,22 +719,76 @@ function ApplicationForm({ user, addToast, setPage, editData, onResubmit }) {
 
 // ─── Member Dashboard ───
 function Dashboard({ user, addToast, setPage }) {
+  const [showApplication, setShowApplication] = useState(false);
+
+  const quickActions = [
+    { label: 'My Status', desc: 'Check your application status', icon: <FileText size={24}/>, color: 'from-yellow-500/20 to-yellow-600/10 border-yellow-500/30 hover:border-yellow-400/50', iconColor: 'text-yellow-400', action: () => setPage('status') },
+    { label: 'Members', desc: 'View whitelisted players', icon: <Users size={24}/>, color: 'from-blue-500/20 to-blue-600/10 border-blue-500/30 hover:border-blue-400/50', iconColor: 'text-blue-400', action: () => setPage('members') },
+    { label: 'Discord', desc: 'Join our community server', icon: <MessageCircle size={24}/>, color: 'from-indigo-500/20 to-indigo-600/10 border-indigo-500/30 hover:border-indigo-400/50', iconColor: 'text-indigo-400', action: () => window.open(SOCIAL_LINKS.discord, '_blank') },
+    { label: 'YouTube', desc: 'Watch our latest content', icon: <Youtube size={24}/>, color: 'from-red-500/20 to-red-600/10 border-red-500/30 hover:border-red-400/50', iconColor: 'text-red-400', action: () => window.open(SOCIAL_LINKS.youtube, '_blank') },
+    { label: 'TikTok', desc: 'Follow us on TikTok', icon: <Globe size={24}/>, color: 'from-pink-500/20 to-pink-600/10 border-pink-500/30 hover:border-pink-400/50', iconColor: 'text-pink-400', action: () => window.open(SOCIAL_LINKS.tiktok, '_blank') },
+    { label: 'Donate', desc: 'Support the server', icon: <Heart size={24}/>, color: 'from-orange-500/20 to-orange-600/10 border-orange-500/30 hover:border-orange-400/50', iconColor: 'text-orange-400', action: () => window.open(SOCIAL_LINKS.donate, '_blank') },
+  ];
+
   return (
     <div className="min-h-screen pt-24 pb-12 px-4 max-w-4xl mx-auto">
       <div className="animate-fade-in">
+        {/* Welcome header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-1">Welcome, {user.gamertag}! 🎮</h1>
-          <p className="text-gray-500">Member Dashboard</p>
+          <div className="flex items-center gap-4 mb-2">
+            {user.photoURL ? (
+              <img src={user.photoURL} alt="" className="w-14 h-14 rounded-full border-2 border-orange-500/40 object-cover"/>
+            ) : (
+              <div className="w-14 h-14 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-400 border-2 border-orange-500/30">
+                <User size={24}/>
+              </div>
+            )}
+            <div>
+              <h1 className="text-3xl font-bold text-white">Welcome, {user.gamertag}! 🎮</h1>
+              <p className="text-gray-500">Your MalaySMP Dashboard</p>
+            </div>
+          </div>
         </div>
 
-        {/* Social links */}
+        {/* Quick Actions Grid */}
         <div className="mb-8">
-          <h2 className="text-lg font-semibold text-white mb-3">Community Links</h2>
-          <SocialBar/>
+          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <Sparkles size={18} className="text-orange-400"/> Quick Actions
+          </h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {quickActions.map((a) => (
+              <button key={a.label} onClick={a.action}
+                className={`group relative p-4 rounded-xl bg-gradient-to-br ${a.color} border backdrop-blur-sm transition-all duration-200 text-left hover:scale-[1.02] active:scale-[0.98]`}>
+                <div className={`${a.iconColor} mb-3`}>{a.icon}</div>
+                <h3 className="text-white font-semibold text-sm mb-0.5">{a.label}</h3>
+                <p className="text-gray-400 text-xs">{a.desc}</p>
+                <ChevronRight size={16} className="absolute top-4 right-4 text-gray-600 group-hover:text-gray-400 transition-colors"/>
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Application form */}
-        <ApplicationForm user={user} addToast={addToast} setPage={setPage}/>
+        {/* Apply / Application Section */}
+        <div className="mb-8">
+          <button onClick={() => setShowApplication(!showApplication)}
+            className="w-full flex items-center justify-between px-5 py-4 glass rounded-xl text-white hover:bg-white/5 transition-all group">
+            <span className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center text-orange-400">
+                <Send size={20}/>
+              </div>
+              <div className="text-left">
+                <span className="font-semibold block">Server Application</span>
+                <span className="text-gray-500 text-xs">Submit or check your whitelist application</span>
+              </div>
+            </span>
+            <ChevronRight size={18} className={`text-gray-400 transition-transform duration-200 ${showApplication ? 'rotate-90' : ''}`}/>
+          </button>
+          {showApplication && (
+            <div className="mt-3 animate-fade-in">
+              <ApplicationForm user={user} addToast={addToast} setPage={setPage}/>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -877,13 +931,11 @@ function StatusPage({ user, setPage, addToast }) {
 
 // ─── User Profile Page ───
 function ProfilePage({ user, addToast, setPage, onProfileUpdate }) {
-  const [avatar, setAvatar] = useState('');
   const [editGamertag, setEditGamertag] = useState(user.gamertag || '');
   const [editDiscord, setEditDiscord] = useState('');
   const [myApp, setMyApp] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
 
@@ -893,7 +945,6 @@ function ProfilePage({ user, addToast, setPage, onProfileUpdate }) {
         const profileSnap = await getDoc(doc(db, 'users', user.id));
         if (profileSnap.exists()) {
           const data = profileSnap.data();
-          setAvatar(data.avatar || '');
           setEditDiscord(data.discordId || '');
           setEditGamertag(data.gamertag || user.gamertag || '');
         }
@@ -908,26 +959,6 @@ function ProfilePage({ user, addToast, setPage, onProfileUpdate }) {
       setLoading(false);
     })();
   }, [user.id, user.gamertag]);
-
-  const handleAvatarUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    setUploading(true);
-    try {
-      const ref = storageRef(storage, `avatars/${user.id}`);
-      await uploadBytes(ref, file);
-      const url = await getDownloadURL(ref);
-      await updateDoc(doc(db, 'users', user.id), { avatar: url });
-      if (auth.currentUser) {
-        await updateProfile(auth.currentUser, { photoURL: url });
-      }
-      setAvatar(url);
-      addToast('Avatar updated!', 'success');
-    } catch {
-      addToast('Failed to upload avatar.', 'error');
-    }
-    setUploading(false);
-  };
 
   const handleSaveProfile = async () => {
     if (!editGamertag.trim()) {
@@ -1003,23 +1034,15 @@ function ProfilePage({ user, addToast, setPage, onProfileUpdate }) {
         <div className="glass rounded-2xl p-8 mb-6">
           <div className="flex flex-col items-center mb-6">
             <div className="relative mb-4">
-              {avatar ? (
-                <img src={avatar} alt="Avatar" className="w-24 h-24 rounded-full object-cover border-2 border-orange-500/50"/>
+              {user.photoURL ? (
+                <img src={user.photoURL} alt="Avatar" className="w-24 h-24 rounded-full object-cover border-2 border-orange-500/50"/>
               ) : (
                 <div className="w-24 h-24 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-400 border-2 border-orange-500/30">
                   <User size={40}/>
                 </div>
               )}
-              <label className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-orange-600 hover:bg-orange-500 flex items-center justify-center cursor-pointer transition-colors">
-                {uploading ? (
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"/>
-                ) : (
-                  <Upload size={14} className="text-white"/>
-                )}
-                <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} disabled={uploading}/>
-              </label>
             </div>
-            <p className="text-gray-500 text-xs">Click the icon to upload a new avatar</p>
+            <p className="text-gray-500 text-xs">Profile picture from your Google account</p>
           </div>
 
           {/* Profile fields */}
@@ -1944,15 +1967,15 @@ export default function App() {
 
   const renderPage = () => {
     switch (page) {
-      case 'landing': return <LandingPage setPage={navigate} siteSettings={siteSettings}/>;
-      case 'login': return <AuthPage addToast={addToast}/>;
+      case 'landing': return <LandingPage setPage={navigate} siteSettings={siteSettings} user={user}/>;
+      case 'login': return user ? <Dashboard user={user} addToast={addToast} setPage={navigate}/> : <AuthPage addToast={addToast}/>;
       case 'members': return <MembersPage/>;
-      case 'setup-gamertag': return user ? <GamertagSetup user={user} onComplete={handleGamertagComplete} addToast={addToast}/> : <LandingPage setPage={navigate} siteSettings={siteSettings}/>;
-      case 'dashboard': return user ? <Dashboard user={user} addToast={addToast} setPage={navigate}/> : <LandingPage setPage={navigate} siteSettings={siteSettings}/>;
-      case 'status': return user ? <StatusPage user={user} setPage={navigate} addToast={addToast}/> : <LandingPage setPage={navigate} siteSettings={siteSettings}/>;
-      case 'profile': return user ? <ProfilePage user={user} addToast={addToast} setPage={navigate} onProfileUpdate={handleProfileUpdate}/> : <LandingPage setPage={navigate} siteSettings={siteSettings}/>;
-      case 'admin': return user?.email === ADMIN_EMAIL ? <AdminPanel addToast={addToast}/> : <LandingPage setPage={navigate} siteSettings={siteSettings}/>;
-      default: return <LandingPage setPage={navigate} siteSettings={siteSettings}/>;
+      case 'setup-gamertag': return user ? <GamertagSetup user={user} onComplete={handleGamertagComplete} addToast={addToast}/> : <LandingPage setPage={navigate} siteSettings={siteSettings} user={user}/>;
+      case 'dashboard': return user ? <Dashboard user={user} addToast={addToast} setPage={navigate}/> : <LandingPage setPage={navigate} siteSettings={siteSettings} user={user}/>;
+      case 'status': return user ? <StatusPage user={user} setPage={navigate} addToast={addToast}/> : <LandingPage setPage={navigate} siteSettings={siteSettings} user={user}/>;
+      case 'profile': return user ? <ProfilePage user={user} addToast={addToast} setPage={navigate} onProfileUpdate={handleProfileUpdate}/> : <LandingPage setPage={navigate} siteSettings={siteSettings} user={user}/>;
+      case 'admin': return user?.email === ADMIN_EMAIL ? <AdminPanel addToast={addToast}/> : <LandingPage setPage={navigate} siteSettings={siteSettings} user={user}/>;
+      default: return <LandingPage setPage={navigate} siteSettings={siteSettings} user={user}/>;
     }
   };
 
