@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Flame, Shield, Users, Star, Youtube, MessageCircle, Heart, ExternalLink,
-  LogIn, UserPlus, LogOut, Menu, X, ChevronRight, Send, Upload, Check,
+  LogIn, UserPlus, LogOut, Menu, X, ChevronRight, ChevronLeft, Send, Upload, Check,
   XCircle, Clock, Search, Bell, Eye, Gamepad2, Mic, Globe, Filter,
   Home, FileText, Settings, CheckCircle, AlertCircle, Sparkles,
   RefreshCw, Trash2, Download, Palette, Image, User, Megaphone, Type,
-  ArrowUpDown, Edit, LayoutDashboard, Link2,
+  ArrowUpDown, Edit, LayoutDashboard, Link2, BookOpen, SkipForward, UserX,
 } from 'lucide-react';
 import {
   auth, db, storage,
@@ -33,6 +33,51 @@ const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || '';
 const FIRESTORE_BATCH_LIMIT = 500;
 const VALID_SKIN_DIMENSIONS = [[64, 64], [64, 128]];
 const DEFAULT_STEVE_SKIN = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAFDUlEQVR42u2a20sUURzH97+I/gzfeuipKIggelARBD1EQVBQD0FBRJeXIqMkMmsrK7O8pZm3NNdbbXXV9bL3mdnZ2ZnZ+8XvOTOr7ZjXnVlX54cfzO7szO75fM/5nXPmjEolISEhISEhISEhISEhMYe4CJYYweJ/fUFfCU4Y/PchScjCJfhXGAe/g5/AJ+AXkIEIDGJePAn/Ai6RR/AHCAt8RFjAfUbw6PsnkB/xKi8LfjEI1gEl4NteqkkvBS7jnf8I1zHOPwwJ/7gTenY2Ax+7d93ifayz62fB7CRy1Y8jP0poQw9/BAl8CjTCNdIh8vMrOK3ESAM58XNIAaV+x74fF/gXSk8rNEiHyNdPIm3wEw3IjdI+5pRK0F2dkN0IlGIPiL2u2HIOJ7vA3Kwq/hfOkR9AQTQH/IVHM+mfMpHAZN9JdjJG0E+k0bEQUomQINqU/RPqjd//g/SIJqHIv5VPkDrL+T89kmGzZ6FGxDhRPIGXH0PdMIvewE+x4f+0gvYwdOZmUQMILU40nnFhKu+x52Xm0mBU2OvUa7LE1oGqWflD/9n9uIEA+cR7GKu/QWQH9x3I+QA/6fPsxXq4f6r2MJ6aF2gxaLBrYlRNBv/g66z9OKBmn0G/I91IjbXCHF2wdH0gT1dlRPtcxp2vD8cCjzzjSYJ1+tVCHvgBH0J+nvTeCxJmEVPAwD0BbDbrBHPo7IhgS+FjqL5SIT8T5hyInOb6E6tGbqLnKJvRwR86TnG+v1j9xBJMl8FfCYNEeSWjHOQ9sSU6K3NdCBJyMQ2J+tQ7d5+dGBt1jN8pQVEyNITgdzBfgFwxPhYBKmSJaBJYxKCfuRZEXfJ/G2kH1uOdBkZF7LBNbRjJvVWdU3Sn2+LqoH+nXsS+ISnQ/x4VOl5sXq16EO8Dg7j/b9nJMgSAcIQEhISUrrBN2hVT7M2+Wp+qUmFz1aYK60mLTw3yfHR0fKSo+nT3c5OBjmYYyF8y81mZ3LBVqI7TxgS8k3f4mVlB0OjV/M0Kt2GUJVLJ/PcmpC9v/2f9jxfJX7z4l/5FPbLJVFSj+y1VwH3fJHybHQFP8zy8rp7MNJabnPYOd1/rMk/V6BRf3m0BO56KZzl7hbufeWf/T4+Z3v7tFXhd0HzKR4n3fCJPHwRNdJfZs6Bg3fUiY9VW8rNjhSXjEXpZ9cbb9fVq/7XTCKkLy3dGv3L7zfcq70WT9X0R/8+rR5Nj+9u7tO3u/f/6pOf/1uJ5KPDE2Y++4Pk3d5T+W1Zr9lVVHiCYj6X64HT9pN3Ln64YcvAOZUKavDCj0PbC/Z0U3M/03NLvXjKF3b8sHT3I84+kX1jVGEW/JWxYe3tN+ybWZp3SqFXaXXfnTmVbkNrnX3s6Yq/7DwTLm8MwS/KR/UDhUV+K44s2m4rdWj/UyLO78m38fzeSZm4qnp5Q7j5OqF4xpb2GPSxW41xz2OoZz5qwuE6hO8ZCwSr+28+TaR8Pw5wZEV4UKGp2ecAV2dfjhc5MQFHklkNAjkJ0SCGi1/5evbqwXGDp7RG7gVnGaFW50d4fSNd1h/tX/2OMJ3V4Dh1BXXLZN6I8yTyVZ+IZ7qFvlB2qJx4tNe8J3v+xPVDwFVw87gQ/o8Y/TCSHUYBJfEVBfhnJFKxX8E1+Bd/UOoIQkJCQkJCQkJCQkJCQkrxP3FH8/bMz1lLAAAAAElFTkSuQmCC';
+
+const RULES_TEXT = [
+  {
+    title: 'Berkaitan Dalam Server',
+    rules: [
+      'Para pemain tidak dibenarkan memasang atau menggunakan toolbox, script, x-ray, dup machine & mana-mana cheating software (sebarang bentuk eksploitasi melanggar permainan minecraft normal)',
+      'Para pemain tidak dibenarkan menyebabkan server menjadi lag.',
+      'Para pemain tidak dibenarkan melakukan sebarang griefing yang melampaui batas.',
+      'Para pemain harus kekal mengikut roleplay masing-masing.',
+    ],
+  },
+  {
+    title: 'Berkaitan Pemain',
+    rules: [
+      'Para pemain harus menghormati privasi antara satu sama lain, tidak berkongsi maklumat pribadi.',
+      'Para pemain tidak dibenarkan melakukan sebarang bentuk pembulian, mass massacre tanpa reason yang munasabah (gila pvp) di dalam server.',
+    ],
+  },
+  {
+    title: 'Hak Cipta',
+    rules: [
+      'Para pemain bersetuju untuk membenarkan video, gambar, audio berkaitan server digunakan oleh LostShark Studio.',
+      'LostShark Studio mempunyai hak ke atas rakaman, gambar dan segala bentuk media berkaitan server (untuk dimasukkan ke dalam konten).',
+    ],
+  },
+  {
+    title: 'Lain-Lain',
+    rules: [
+      'Para pemain wajib menggunakan mic (voice proximity) untuk bermain.',
+      'Para pemain tidak dibenarkan memasuki Nether atau The End. Event ini hanya dijalankan di Overworld sahaja.',
+      'Jika server berstatus event maka hanya pemain yang telah berdaftar serta tersenarai di #Whitelisted dibenarkan berada di dalam server.',
+    ],
+  },
+];
+
+const APP_STEPS = [
+  { label: 'Rules', icon: 'BookOpen' },
+  { label: 'Profile', icon: 'User' },
+  { label: 'Details', icon: 'FileText' },
+  { label: 'Social', icon: 'Globe' },
+  { label: 'Skin', icon: 'Upload' },
+  { label: 'Roleplay', icon: 'Gamepad2' },
+  { label: 'VoiceCraft', icon: 'Mic' },
+  { label: 'Submit', icon: 'Send' },
+];
 
 // ─── Helpers ───
 function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
@@ -94,10 +139,52 @@ function Particles() {
   );
 }
 
+// ─── Notification Dropdown ───
+function NotificationDropdown({ notifications, onMarkRead, onClose }) {
+  return (
+    <div className="absolute right-0 top-full mt-2 w-80 max-h-96 overflow-y-auto glass rounded-xl border border-white/10 shadow-2xl animate-fade-in z-50">
+      <div className="p-3 border-b border-white/10 flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-white">Notifications</h3>
+        <button onClick={onClose} className="text-gray-400 hover:text-white"><X size={14}/></button>
+      </div>
+      {notifications.length === 0 ? (
+        <div className="p-6 text-center text-gray-500 text-sm">No notifications yet</div>
+      ) : (
+        <div className="divide-y divide-white/5">
+          {notifications.map(n => (
+            <div key={n.id}
+              className={`p-3 hover:bg-white/5 transition-colors cursor-pointer ${!n.read ? 'bg-orange-500/5' : ''}`}
+              onClick={() => onMarkRead(n.id)}>
+              <div className="flex items-start gap-2">
+                <div className={`mt-0.5 flex-shrink-0 ${
+                  n.type === 'accepted' ? 'text-emerald-400' :
+                  n.type === 'declined' ? 'text-red-400' :
+                  n.type === 'removed' ? 'text-yellow-400' : 'text-blue-400'
+                }`}>
+                  {n.type === 'accepted' ? <CheckCircle size={16}/> :
+                   n.type === 'declined' ? <XCircle size={16}/> :
+                   n.type === 'removed' ? <UserX size={16}/> : <Bell size={16}/>}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm ${!n.read ? 'text-white' : 'text-gray-400'}`}>{n.message}</p>
+                  <p className="text-xs text-gray-600 mt-0.5">{n.timeAgo || ''}</p>
+                </div>
+                {!n.read && <div className="w-2 h-2 rounded-full bg-orange-400 flex-shrink-0 mt-1.5"/>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Navbar ───
-function Navbar({ page, setPage, user, onLogout }) {
+function Navbar({ page, setPage, user, onLogout, notifications, onMarkNotifRead }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
   const isAdmin = user?.email === ADMIN_EMAIL;
+  const unreadCount = notifications?.filter(n => !n.read).length || 0;
 
   const navItems = user ? (
     isAdmin ? [
@@ -133,6 +220,26 @@ function Navbar({ page, setPage, user, onLogout }) {
               {n.icon} {n.label}
             </button>
           ))}
+          {user && !isAdmin && (
+            <div className="relative">
+              <button onClick={() => setNotifOpen(!notifOpen)}
+                className="relative flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-white/5 transition-all">
+                <Bell size={16}/>
+                {unreadCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-orange-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </button>
+              {notifOpen && (
+                <NotificationDropdown
+                  notifications={notifications || []}
+                  onMarkRead={(id) => { onMarkNotifRead(id); }}
+                  onClose={() => setNotifOpen(false)}
+                />
+              )}
+            </div>
+          )}
           {user && (
             <button onClick={onLogout}
               className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all ml-2">
@@ -142,9 +249,31 @@ function Navbar({ page, setPage, user, onLogout }) {
         </div>
 
         {/* Mobile toggle */}
-        <button onClick={() => setMenuOpen(!menuOpen)} className="md:hidden text-gray-400 hover:text-white">
-          {menuOpen ? <X size={24}/> : <Menu size={24}/>}
-        </button>
+        <div className="flex items-center gap-2 md:hidden">
+          {user && !isAdmin && (
+            <div className="relative">
+              <button onClick={() => setNotifOpen(!notifOpen)}
+                className="relative text-gray-400 hover:text-white p-1">
+                <Bell size={20}/>
+                {unreadCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-orange-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </button>
+              {notifOpen && (
+                <NotificationDropdown
+                  notifications={notifications || []}
+                  onMarkRead={(id) => { onMarkNotifRead(id); }}
+                  onClose={() => setNotifOpen(false)}
+                />
+              )}
+            </div>
+          )}
+          <button onClick={() => setMenuOpen(!menuOpen)} className="text-gray-400 hover:text-white">
+            {menuOpen ? <X size={24}/> : <Menu size={24}/>}
+          </button>
+        </div>
       </div>
 
       {/* Mobile menu */}
@@ -192,6 +321,28 @@ function SocialBar() {
   );
 }
 
+// ─── Footer ───
+function Footer({ siteSettings }) {
+  const serverName = siteSettings?.serverName || 'MalaySMP';
+  return (
+    <footer className="relative z-10 border-t border-white/5 mt-12">
+      <div className="max-w-6xl mx-auto px-4 py-10">
+        <div className="flex flex-col items-center gap-6">
+          <div className="flex items-center gap-2 text-orange-400 font-bold text-lg">
+            <Flame size={22}/> {serverName}
+          </div>
+          <SocialBar/>
+          <div className="w-full border-t border-white/5 pt-6">
+            <p className="text-center text-gray-600 text-sm">
+              &copy; {new Date().getFullYear()} {serverName}. All rights reserved.
+            </p>
+          </div>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
 // ─── Landing Page ───
 function LandingPage({ setPage, siteSettings, user }) {
   const serverName = siteSettings?.serverName || 'MalaySMP';
@@ -205,7 +356,7 @@ function LandingPage({ setPage, siteSettings, user }) {
     { icon: <Shield size={28}/>, title: 'Private & Safe', desc: 'Whitelisted community with active moderation and friendly players.' },
     { icon: <Users size={28}/>, title: 'Active Community', desc: 'Join an engaged group of roleplayers from around the world.' },
     { icon: <Star size={28}/>, title: 'Custom Content', desc: 'Unique builds, lore, quests, and events crafted by our team.' },
-    { icon: <Gamepad2 size={28}/>, title: 'Bedrock Edition', desc: 'Play on any device — Xbox, Mobile, PC, Switch, and more.' },
+    { icon: <Gamepad2 size={28}/>, title: 'Bedrock Edition', desc: 'Play on any device \u2014 Xbox, Mobile, PC, Switch, and more.' },
   ];
 
   return (
@@ -278,13 +429,6 @@ function LandingPage({ setPage, siteSettings, user }) {
         </div>
       </section>
 
-      {/* Social links */}
-      <section className="max-w-4xl mx-auto px-4 py-16 text-center">
-        <h2 className="text-3xl font-bold text-white mb-2">Connect With Us</h2>
-        <p className="text-gray-500 mb-8">Follow us on social media and join the community.</p>
-        <SocialBar/>
-      </section>
-
       {/* CTA */}
       <section className="max-w-4xl mx-auto px-4 py-20 text-center">
         <div className="glass rounded-2xl p-10">
@@ -298,11 +442,6 @@ function LandingPage({ setPage, siteSettings, user }) {
           </button>
         </div>
       </section>
-
-      {/* Footer */}
-      <footer className="border-t border-white/5 py-8 text-center text-gray-600 text-sm">
-        <p>&copy; {new Date().getFullYear()} {serverName}. All rights reserved.</p>
-      </footer>
     </div>
   );
 }
@@ -438,9 +577,38 @@ function GamertagSetup({ user, onComplete, addToast }) {
   );
 }
 
-// ─── Application Form ───
+// ─── Step Progress Bar ───
+function StepProgress({ currentStep, totalSteps, stepLabels }) {
+  return (
+    <div className="mb-8">
+      <div className="flex items-center justify-between mb-3">
+        {Array.from({ length: totalSteps }, (_, i) => (
+          <div key={i} className="flex flex-col items-center flex-1">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
+              i < currentStep ? 'bg-orange-500 text-white' :
+              i === currentStep ? 'bg-orange-500/30 text-orange-400 ring-2 ring-orange-500/50' :
+              'bg-white/5 text-gray-600'
+            }`}>
+              {i < currentStep ? <Check size={14}/> : i + 1}
+            </div>
+            <span className={`text-[10px] mt-1 text-center hidden md:block ${
+              i <= currentStep ? 'text-orange-400' : 'text-gray-600'
+            }`}>{stepLabels?.[i] || ''}</span>
+          </div>
+        ))}
+      </div>
+      <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+        <div className="h-full bg-gradient-to-r from-orange-500 to-yellow-400 rounded-full transition-all duration-500"
+          style={{ width: `${(currentStep / (totalSteps - 1)) * 100}%` }}/>
+      </div>
+    </div>
+  );
+}
+
+// ─── Application Form (Multi-Step Wizard) ───
 function ApplicationForm({ user, addToast, setPage, editData, onResubmit }) {
   const [loading, setLoading] = useState(!editData);
+  const [step, setStep] = useState(editData ? 1 : 0);
   const [form, setForm] = useState({
     gamertag: user.gamertag || '',
     discordId: editData?.discordId || '',
@@ -452,10 +620,16 @@ function ApplicationForm({ user, addToast, setPage, editData, onResubmit }) {
     rpExplanation: editData?.rpExplanation || '',
     voiceCraftConfirm: false,
     additionalMessage: editData?.additionalMessage || '',
+    rulesAccepted: !!editData,
   });
   const [submitted, setSubmitted] = useState(false);
   const [skinError, setSkinError] = useState('');
   const [voiceCraftClicked, setVoiceCraftClicked] = useState(false);
+  const [rulesScrolled, setRulesScrolled] = useState(false);
+  const rulesRef = useRef(null);
+
+  const TOTAL_STEPS = 8;
+  const stepLabels = APP_STEPS.map(s => s.label);
 
   useEffect(() => {
     if (editData) {
@@ -475,12 +649,19 @@ function ApplicationForm({ user, addToast, setPage, editData, onResubmit }) {
     })();
   }, [user.id, editData]);
 
+  const handleRulesScroll = () => {
+    if (!rulesRef.current) return;
+    const el = rulesRef.current;
+    const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 20;
+    if (atBottom) setRulesScrolled(true);
+  };
+
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
     setSkinError('');
     if (!file.name.toLowerCase().endsWith('.png') || file.type !== 'image/png') {
-      setSkinError('Invalid skin. Must be a 64×64 or 64×128 PNG file.');
+      setSkinError('Invalid skin. Must be a 64\u00d764 or 64\u00d7128 PNG file.');
       e.target.value = '';
       return;
     }
@@ -490,7 +671,7 @@ function ApplicationForm({ user, addToast, setPage, editData, onResubmit }) {
       img.onload = () => {
         const valid = VALID_SKIN_DIMENSIONS.some(([w, h]) => img.width === w && img.height === h);
         if (!valid) {
-          setSkinError('Invalid skin. Must be a 64×64 or 64×128 PNG file.');
+          setSkinError('Invalid skin. Must be a 64\u00d764 or 64\u00d7128 PNG file.');
           setForm(prev => ({ ...prev, skinPreview: '' }));
         } else {
           setSkinError('');
@@ -498,15 +679,14 @@ function ApplicationForm({ user, addToast, setPage, editData, onResubmit }) {
         }
       };
       img.onerror = () => {
-        setSkinError('Invalid skin. Must be a 64×64 or 64×128 PNG file.');
+        setSkinError('Invalid skin. Must be a 64\u00d764 or 64\u00d7128 PNG file.');
       };
       img.src = ev.target.result;
     };
     reader.readAsDataURL(file);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     if (!form.discordId || !form.gender || !form.age || !form.rpInterest) {
       addToast('Please fill in all required fields.', 'error');
       return;
@@ -521,7 +701,6 @@ function ApplicationForm({ user, addToast, setPage, editData, onResubmit }) {
     }
     try {
       if (editData && editData.appId) {
-        // Resubmission — update existing document
         await updateDoc(doc(db, 'applications', editData.appId), {
           ...form,
           status: 'pending',
@@ -550,6 +729,9 @@ function ApplicationForm({ user, addToast, setPage, editData, onResubmit }) {
       addToast('Failed to submit application. Please try again.', 'error');
     }
   };
+
+  const nextStep = () => setStep(s => Math.min(s + 1, TOTAL_STEPS - 1));
+  const prevStep = () => setStep(s => Math.max(s - 1, 0));
 
   if (loading) {
     return (
@@ -586,134 +768,376 @@ function ApplicationForm({ user, addToast, setPage, editData, onResubmit }) {
     );
   }
 
+  const navButtons = (canNext, onNext) => (
+    <div className="flex gap-3 mt-6">
+      {step > 0 && (
+        <button type="button" onClick={prevStep}
+          className="flex-1 py-3 rounded-lg glass glass-hover text-gray-300 font-semibold transition-all animate-btn-press flex items-center justify-center gap-2">
+          <ChevronLeft size={18}/> Back
+        </button>
+      )}
+      <button type="button" onClick={onNext || nextStep} disabled={!canNext}
+        className="flex-1 py-3 rounded-lg bg-orange-600 hover:bg-orange-500 disabled:opacity-30 disabled:cursor-not-allowed text-white font-semibold transition-all animate-btn-press flex items-center justify-center gap-2">
+        {step === TOTAL_STEPS - 1 ? (
+          <><Send size={18}/> {editData ? 'Resubmit Application' : 'Complete Application'}</>
+        ) : (
+          <>Confirm <ChevronRight size={18}/></>
+        )}
+      </button>
+    </div>
+  );
+
+  const renderStep = () => {
+    switch (step) {
+      // ─── Step 0: Rules ───
+      case 0:
+        return (
+          <div className="animate-fade-in">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center text-orange-400">
+                <BookOpen size={20}/>
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">Server Rules & Agreement</h3>
+                <p className="text-gray-500 text-xs">Please read all rules carefully before proceeding</p>
+              </div>
+            </div>
+            <div ref={rulesRef} onScroll={handleRulesScroll}
+              className="max-h-80 overflow-y-auto glass rounded-xl p-5 space-y-5 mb-4 border border-white/5">
+              <div className="flex items-center gap-2 text-orange-400 font-semibold text-sm">
+                <Megaphone size={16}/> PERATURAN
+              </div>
+              {RULES_TEXT.map((section, i) => (
+                <div key={i}>
+                  <h4 className="text-sm font-semibold text-yellow-400 mb-2 flex items-center gap-2">
+                    <Shield size={14}/> {section.title}
+                  </h4>
+                  <div className="space-y-2">
+                    {section.rules.map((rule, j) => (
+                      <div key={j} className="flex items-start gap-2 text-sm text-gray-300">
+                        <ChevronRight size={14} className="text-orange-400 mt-0.5 flex-shrink-0"/>
+                        <span>{rule}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+            {!rulesScrolled && (
+              <p className="text-xs text-yellow-400/70 mb-3 flex items-center gap-1">
+                <AlertCircle size={12}/> Scroll to the bottom to enable the checkbox
+              </p>
+            )}
+            <label className={`flex items-start gap-3 cursor-pointer ${!rulesScrolled ? 'opacity-40 pointer-events-none' : ''}`}>
+              <input type="checkbox" checked={form.rulesAccepted}
+                onChange={e => setForm(prev => ({ ...prev, rulesAccepted: e.target.checked }))}
+                disabled={!rulesScrolled}
+                className="mt-1 accent-orange-500"/>
+              <span className="text-sm text-gray-300">
+                I have read, understood, and agree to follow all the server rules above.
+              </span>
+            </label>
+            {navButtons(form.rulesAccepted)}
+          </div>
+        );
+
+      // ─── Step 1: Gamertag & Discord ───
+      case 1:
+        return (
+          <div className="animate-fade-in">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center text-orange-400">
+                <User size={20}/>
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">Profile Information</h3>
+                <p className="text-gray-500 text-xs">Enter your gamertag and Discord ID</p>
+              </div>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Minecraft Gamertag <span className="text-red-400">*</span></label>
+                <input type="text" value={form.gamertag}
+                  onChange={e => setForm(prev => ({ ...prev, gamertag: e.target.value }))}
+                  className="w-full px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/50 transition"
+                  placeholder="YourGamertag"/>
+                <p className="text-xs text-gray-600 mt-1">You can change your gamertag here if needed</p>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Discord ID <span className="text-red-400">*</span></label>
+                <input type="text" value={form.discordId}
+                  onChange={e => setForm(prev => ({ ...prev, discordId: e.target.value }))}
+                  className="w-full px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/50 transition"
+                  placeholder="username#1234"/>
+              </div>
+            </div>
+            {navButtons(form.gamertag.trim() && form.discordId.trim())}
+          </div>
+        );
+
+      // ─── Step 2: Age & Gender ───
+      case 2:
+        return (
+          <div className="animate-fade-in">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center text-orange-400">
+                <FileText size={20}/>
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">Personal Details</h3>
+                <p className="text-gray-500 text-xs">Tell us a bit about yourself</p>
+              </div>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Age <span className="text-red-400">*</span></label>
+                <input type="number" min="13" max="99" value={form.age}
+                  onChange={e => setForm(prev => ({ ...prev, age: e.target.value }))}
+                  className="w-full px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/50 transition"
+                  placeholder="18"/>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Gender <span className="text-red-400">*</span></label>
+                <select value={form.gender}
+                  onChange={e => setForm(prev => ({ ...prev, gender: e.target.value }))}
+                  className="w-full px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:border-orange-500/50 transition">
+                  <option value="" className="bg-gray-900">Select...</option>
+                  <option value="Male" className="bg-gray-900">Male</option>
+                  <option value="Female" className="bg-gray-900">Female</option>
+                  <option value="Other" className="bg-gray-900">Other</option>
+                  <option value="Prefer not to say" className="bg-gray-900">Prefer not to say</option>
+                </select>
+              </div>
+            </div>
+            {navButtons(form.age && form.gender)}
+          </div>
+        );
+
+      // ─── Step 3: Social Media ───
+      case 3:
+        return (
+          <div className="animate-fade-in">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center text-orange-400">
+                <Globe size={20}/>
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">Social Media</h3>
+                <p className="text-gray-500 text-xs">Optional &mdash; share your social media handles</p>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">Social Media Handle(s)</label>
+              <input type="text" value={form.socialMedia}
+                onChange={e => setForm(prev => ({ ...prev, socialMedia: e.target.value }))}
+                className="w-full px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/50 transition"
+                placeholder="@yourhandle (Instagram, Twitter, TikTok, etc.)"/>
+              <p className="text-xs text-gray-600 mt-1">This is optional. You can skip this step.</p>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button type="button" onClick={prevStep}
+                className="flex-1 py-3 rounded-lg glass glass-hover text-gray-300 font-semibold transition-all animate-btn-press flex items-center justify-center gap-2">
+                <ChevronLeft size={18}/> Back
+              </button>
+              {!form.socialMedia && (
+                <button type="button" onClick={nextStep}
+                  className="flex-1 py-3 rounded-lg bg-white/10 hover:bg-white/15 text-gray-300 font-semibold transition-all animate-btn-press flex items-center justify-center gap-2">
+                  <SkipForward size={18}/> Skip
+                </button>
+              )}
+              <button type="button" onClick={nextStep}
+                className="flex-1 py-3 rounded-lg bg-orange-600 hover:bg-orange-500 text-white font-semibold transition-all animate-btn-press flex items-center justify-center gap-2">
+                Confirm <ChevronRight size={18}/>
+              </button>
+            </div>
+          </div>
+        );
+
+      // ─── Step 4: Skin Upload ───
+      case 4:
+        return (
+          <div className="animate-fade-in">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center text-orange-400">
+                <Upload size={20}/>
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">Minecraft Skin</h3>
+                <p className="text-gray-500 text-xs">Upload your Minecraft skin file (PNG, 64\u00d764 or 64\u00d7128)</p>
+              </div>
+            </div>
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <label className="flex items-center gap-2 px-5 py-3 rounded-lg bg-white/5 border border-white/10 border-dashed text-gray-300 hover:border-orange-500/50 cursor-pointer transition text-sm">
+                  <Upload size={16}/> Choose .png File
+                  <input type="file" accept=".png,image/png" className="hidden" onChange={handleFileUpload}/>
+                </label>
+                {form.skinPreview && !skinError && (
+                  <div className="flex items-center gap-2 text-emerald-400 text-sm">
+                    <CheckCircle size={16}/> Skin uploaded
+                  </div>
+                )}
+              </div>
+              {skinError && (
+                <p className="text-red-400 text-xs">{skinError}</p>
+              )}
+              {form.skinPreview && !skinError && (
+                <div className="glass rounded-xl p-6 flex flex-col items-center">
+                  <p className="text-sm text-gray-400 mb-3">3D Preview</p>
+                  <SkinViewer3D skinUrl={form.skinPreview} width={180} height={320}/>
+                </div>
+              )}
+            </div>
+            {navButtons(!!form.skinPreview && !skinError)}
+          </div>
+        );
+
+      // ─── Step 5: Roleplay Questions ───
+      case 5:
+        return (
+          <div className="animate-fade-in">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center text-orange-400">
+                <Gamepad2 size={20}/>
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">Roleplay Interest</h3>
+                <p className="text-gray-500 text-xs">Tell us about your interest in roleplay</p>
+              </div>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-gray-400 mb-2">Are you interested in Roleplay? <span className="text-red-400">*</span></label>
+                <div className="flex gap-4">
+                  {['Yes', 'No'].map(opt => (
+                    <label key={opt} className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg cursor-pointer border transition-all ${
+                      form.rpInterest === opt
+                        ? 'bg-orange-500/20 border-orange-500/50 text-orange-400'
+                        : 'bg-white/5 border-white/10 text-gray-400 hover:border-white/20'
+                    }`}>
+                      <input type="radio" name="rpInterest" value={opt}
+                        checked={form.rpInterest === opt}
+                        onChange={e => setForm(prev => ({ ...prev, rpInterest: e.target.value }))}
+                        className="hidden"/>
+                      <span className="text-sm font-medium">{opt}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Briefly explain your roleplay interest</label>
+                <textarea value={form.rpExplanation}
+                  onChange={e => setForm(prev => ({ ...prev, rpExplanation: e.target.value }))}
+                  className="w-full px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/50 transition text-sm"
+                  rows={3} placeholder="Tell us about your roleplay experience or what excites you about it..."/>
+              </div>
+            </div>
+            {navButtons(!!form.rpInterest)}
+          </div>
+        );
+
+      // ─── Step 6: VoiceCraft ───
+      case 6:
+        return (
+          <div className="animate-fade-in">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center text-orange-400">
+                <Mic size={20}/>
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">Voice Proximity Chat</h3>
+                <p className="text-gray-500 text-xs">VoiceCraft is required for our server</p>
+              </div>
+            </div>
+            <div className="glass rounded-xl p-5 space-y-4 border border-orange-500/20">
+              <p className="text-sm text-gray-300">
+                VoiceCraft adds proximity voice chat to Minecraft Bedrock. Players near you can hear you speak in real-time &mdash; this is <strong className="text-orange-400">required</strong> for our server&apos;s immersive roleplay experience.
+              </p>
+              <p className="text-sm text-gray-400">
+                You <strong className="text-white">must</strong> download and install VoiceCraft before you can proceed.
+              </p>
+              <a href={VOICECRAFT_LINK} target="_blank" rel="noopener noreferrer"
+                onClick={() => setVoiceCraftClicked(true)}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-orange-600/20 text-orange-400 hover:bg-orange-600/30 transition-all text-sm font-medium animate-btn-press">
+                <Download size={16}/> Download VoiceCraft v1.4.0
+              </a>
+              {voiceCraftClicked && (
+                <p className="text-xs text-emerald-400 flex items-center gap-1"><CheckCircle size={12}/> Download link opened</p>
+              )}
+              <label className={`flex items-start gap-3 cursor-pointer pt-2 ${!voiceCraftClicked ? 'opacity-40 pointer-events-none' : ''}`}>
+                <input type="checkbox" checked={form.voiceCraftConfirm}
+                  onChange={e => setForm(prev => ({ ...prev, voiceCraftConfirm: e.target.checked }))}
+                  disabled={!voiceCraftClicked}
+                  className="mt-1 accent-orange-500"/>
+                <span className="text-sm text-gray-300">
+                  I have downloaded and installed VoiceCraft
+                </span>
+              </label>
+              {!voiceCraftClicked && (
+                <p className="text-xs text-yellow-400/70 flex items-center gap-1">
+                  <AlertCircle size={12}/> You must click the download link first
+                </p>
+              )}
+            </div>
+            {navButtons(form.voiceCraftConfirm)}
+          </div>
+        );
+
+      // ─── Step 7: Additional Message + Submit ───
+      case 7:
+        return (
+          <div className="animate-fade-in">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center text-orange-400">
+                <Send size={20}/>
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">Almost Done!</h3>
+                <p className="text-gray-500 text-xs">Leave a message or submit your application</p>
+              </div>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Additional Message to Admin <span className="text-gray-600">(optional)</span></label>
+                <textarea value={form.additionalMessage}
+                  onChange={e => setForm(prev => ({ ...prev, additionalMessage: e.target.value }))}
+                  className="w-full px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/50 transition text-sm"
+                  rows={4} placeholder="Anything else you'd like us to know..."/>
+              </div>
+              {/* Summary */}
+              <div className="glass rounded-xl p-4 space-y-2 text-sm">
+                <h4 className="text-white font-semibold mb-2 flex items-center gap-2"><CheckCircle size={14} className="text-orange-400"/> Application Summary</h4>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                  <span className="text-gray-500">Gamertag:</span><span className="text-white">{form.gamertag}</span>
+                  <span className="text-gray-500">Discord:</span><span className="text-white">{form.discordId}</span>
+                  <span className="text-gray-500">Age:</span><span className="text-white">{form.age}</span>
+                  <span className="text-gray-500">Gender:</span><span className="text-white">{form.gender}</span>
+                  <span className="text-gray-500">RP Interest:</span><span className="text-white">{form.rpInterest}</span>
+                  <span className="text-gray-500">Skin:</span><span className="text-emerald-400">{form.skinPreview ? '\u2713 Uploaded' : '\u2717 Missing'}</span>
+                  <span className="text-gray-500">VoiceCraft:</span><span className="text-emerald-400">{form.voiceCraftConfirm ? '\u2713 Confirmed' : '\u2717 Not confirmed'}</span>
+                </div>
+              </div>
+            </div>
+            {navButtons(true, handleSubmit)}
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
   return (
-    <form onSubmit={handleSubmit} className="glass rounded-2xl p-6 md:p-8 animate-fade-in">
+    <div className="glass rounded-2xl p-6 md:p-8 animate-fade-in">
       <h3 className="text-xl font-bold text-white mb-1">
         {editData ? 'Edit & Resubmit Application' : 'Server Application'}
       </h3>
       <p className="text-gray-500 text-sm mb-6">
-        {editData ? 'Update your answers and resubmit for review.' : 'Fill out all fields to apply for whitelist access.'}
+        {editData ? 'Update your answers and resubmit for review.' : 'Complete all steps to apply for whitelist access.'}
       </p>
-
-      <div className="grid md:grid-cols-2 gap-4 mb-4">
-        <div>
-          <label className="block text-sm text-gray-400 mb-1">Minecraft Gamertag</label>
-          <input type="text" value={form.gamertag} readOnly
-            className="w-full px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white/60 cursor-not-allowed"/>
-        </div>
-        <div>
-          <label className="block text-sm text-gray-400 mb-1">Discord ID <span className="text-red-400">*</span></label>
-          <input type="text" value={form.discordId}
-            onChange={e => setForm({...form, discordId: e.target.value})}
-            className="w-full px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/50 transition"
-            placeholder="username#1234"/>
-        </div>
-        <div>
-          <label className="block text-sm text-gray-400 mb-1">Gender <span className="text-red-400">*</span></label>
-          <select value={form.gender}
-            onChange={e => setForm({...form, gender: e.target.value})}
-            className="w-full px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:border-orange-500/50 transition">
-            <option value="" className="bg-gray-900">Select...</option>
-            <option value="Male" className="bg-gray-900">Male</option>
-            <option value="Female" className="bg-gray-900">Female</option>
-            <option value="Other" className="bg-gray-900">Other</option>
-            <option value="Prefer not to say" className="bg-gray-900">Prefer not to say</option>
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm text-gray-400 mb-1">Age <span className="text-red-400">*</span></label>
-          <input type="number" min="13" max="99" value={form.age}
-            onChange={e => setForm({...form, age: e.target.value})}
-            className="w-full px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/50 transition"
-            placeholder="18"/>
-        </div>
-        <div className="md:col-span-2">
-          <label className="block text-sm text-gray-400 mb-1">Social Media Handle(s)</label>
-          <input type="text" value={form.socialMedia}
-            onChange={e => setForm({...form, socialMedia: e.target.value})}
-            className="w-full px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/50 transition"
-            placeholder="@yourhandle (Instagram, Twitter, etc.)"/>
-        </div>
-      </div>
-
-      {/* Skin upload */}
-      <div className="mb-4">
-        <label className="block text-sm text-gray-400 mb-1">Minecraft Skin (PNG Upload) <span className="text-red-400">*</span></label>
-        <div className="flex items-center gap-4">
-          <label className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-gray-300 hover:border-orange-500/50 cursor-pointer transition text-sm">
-            <Upload size={16}/> Choose .png File
-            <input type="file" accept=".png,image/png" className="hidden" onChange={handleFileUpload}/>
-          </label>
-          {form.skinPreview && (
-            <img src={form.skinPreview} alt="Skin preview" className="w-16 h-16 rounded-lg border border-white/10 pixel-art"/>
-          )}
-        </div>
-        {skinError && (
-          <p className="text-red-400 text-xs mt-1">{skinError}</p>
-        )}
-      </div>
-
-      {/* RP Interest */}
-      <div className="mb-4">
-        <label className="block text-sm text-gray-400 mb-1">Are you interested in Roleplay? <span className="text-red-400">*</span></label>
-        <div className="flex gap-4 mb-2">
-          {['Yes', 'No'].map(opt => (
-            <label key={opt} className="flex items-center gap-2 cursor-pointer">
-              <input type="radio" name="rpInterest" value={opt}
-                checked={form.rpInterest === opt}
-                onChange={e => setForm({...form, rpInterest: e.target.value})}
-                className="accent-orange-500"/>
-              <span className="text-sm text-gray-300">{opt}</span>
-            </label>
-          ))}
-        </div>
-        <textarea value={form.rpExplanation}
-          onChange={e => setForm({...form, rpExplanation: e.target.value})}
-          className="w-full px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/50 transition text-sm"
-          rows={2} placeholder="Briefly explain your roleplay interest..."/>
-      </div>
-
-      {/* VoiceCraft Section */}
-      <div className="mb-4 p-4 rounded-lg bg-orange-500/5 border border-orange-500/20 space-y-3">
-        <div className="flex items-center gap-2 mb-1">
-          <Mic size={18} className="text-orange-400"/>
-          <h4 className="text-sm font-semibold text-white">VoiceCraft — Voice Proximity Chat</h4>
-        </div>
-        <p className="text-xs text-gray-400">
-          VoiceCraft adds proximity voice chat to Minecraft Bedrock. Players near you can hear you speak in real-time — this is <strong className="text-gray-300">required</strong> for our server&apos;s immersive roleplay experience. You must download and install it before joining.
-        </p>
-        <a href={VOICECRAFT_LINK} target="_blank" rel="noopener noreferrer"
-          onClick={() => setVoiceCraftClicked(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-orange-600/20 text-orange-400 hover:bg-orange-600/30 transition-all text-sm font-medium animate-btn-press">
-          <Download size={16}/> Download VoiceCraft
-        </a>
-        {voiceCraftClicked && (
-          <p className="text-xs text-emerald-400">✓ Download link opened</p>
-        )}
-        <label className="flex items-start gap-3 cursor-pointer pt-1">
-          <input type="checkbox" checked={form.voiceCraftConfirm}
-            onChange={e => setForm({...form, voiceCraftConfirm: e.target.checked})}
-            className="mt-1 accent-orange-500"/>
-          <span className="text-sm text-gray-300">
-            I have downloaded and installed VoiceCraft
-          </span>
-        </label>
-      </div>
-
-      {/* Additional message */}
-      <div className="mb-6">
-        <label className="block text-sm text-gray-400 mb-1">Additional Message to Admin</label>
-        <textarea value={form.additionalMessage}
-          onChange={e => setForm({...form, additionalMessage: e.target.value})}
-          className="w-full px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/50 transition text-sm"
-          rows={3} placeholder="Anything else you'd like us to know..."/>
-      </div>
-
-      <button type="submit"
-        className="w-full py-3 rounded-lg bg-orange-600 hover:bg-orange-500 text-white font-semibold transition-all animate-btn-press flex items-center justify-center gap-2">
-        <Send size={18}/> {editData ? 'Resubmit Application' : 'Submit Application'}
-      </button>
-    </form>
+      <StepProgress currentStep={step} totalSteps={TOTAL_STEPS} stepLabels={stepLabels}/>
+      {renderStep()}
+    </div>
   );
 }
 
@@ -725,9 +1149,6 @@ function Dashboard({ user, addToast, setPage }) {
     { label: 'My Status', desc: 'Check your application status', icon: <FileText size={24}/>, color: 'from-yellow-500/20 to-yellow-600/10 border-yellow-500/30 hover:border-yellow-400/50', iconColor: 'text-yellow-400', action: () => setPage('status') },
     { label: 'Members', desc: 'View whitelisted players', icon: <Users size={24}/>, color: 'from-blue-500/20 to-blue-600/10 border-blue-500/30 hover:border-blue-400/50', iconColor: 'text-blue-400', action: () => setPage('members') },
     { label: 'Discord', desc: 'Join our community server', icon: <MessageCircle size={24}/>, color: 'from-indigo-500/20 to-indigo-600/10 border-indigo-500/30 hover:border-indigo-400/50', iconColor: 'text-indigo-400', action: () => window.open(SOCIAL_LINKS.discord, '_blank', 'noopener,noreferrer') },
-    { label: 'YouTube', desc: 'Watch our latest content', icon: <Youtube size={24}/>, color: 'from-red-500/20 to-red-600/10 border-red-500/30 hover:border-red-400/50', iconColor: 'text-red-400', action: () => window.open(SOCIAL_LINKS.youtube, '_blank', 'noopener,noreferrer') },
-    { label: 'TikTok', desc: 'Follow us on TikTok', icon: <Globe size={24}/>, color: 'from-pink-500/20 to-pink-600/10 border-pink-500/30 hover:border-pink-400/50', iconColor: 'text-pink-400', action: () => window.open(SOCIAL_LINKS.tiktok, '_blank', 'noopener,noreferrer') },
-    { label: 'Donate', desc: 'Support the server', icon: <Heart size={24}/>, color: 'from-orange-500/20 to-orange-600/10 border-orange-500/30 hover:border-orange-400/50', iconColor: 'text-orange-400', action: () => window.open(SOCIAL_LINKS.donate, '_blank', 'noopener,noreferrer') },
   ];
 
   return (
@@ -744,7 +1165,7 @@ function Dashboard({ user, addToast, setPage }) {
               </div>
             )}
             <div>
-              <h1 className="text-3xl font-bold text-white">Welcome, {user.gamertag}! 🎮</h1>
+              <h1 className="text-3xl font-bold text-white">Welcome, {user.gamertag}! &#127918;</h1>
               <p className="text-gray-500">Your MalaySMP Dashboard</p>
             </div>
           </div>
@@ -891,7 +1312,7 @@ function StatusPage({ user, setPage, addToast }) {
               {myApp.status === 'accepted' && (
                 <div className="rounded-xl p-4 bg-emerald-500/10 border border-emerald-500/30 text-center">
                   <CheckCircle size={24} className="text-emerald-400 mx-auto mb-2"/>
-                  <p className="text-emerald-300 font-semibold">🎉 Congratulations! You&apos;re whitelisted!</p>
+                  <p className="text-emerald-300 font-semibold">&#127881; Congratulations! You&apos;re whitelisted!</p>
                   <p className="text-emerald-400/70 text-sm mt-1">Welcome to the server. Check Discord for connection details and rules.</p>
                 </div>
               )}
@@ -1187,6 +1608,10 @@ function AdminPanel({ addToast }) {
   const [declineTarget, setDeclineTarget] = useState(null);
   const [declineReason, setDeclineReason] = useState('');
 
+  // Remove from whitelist modal
+  const [removeTarget, setRemoveTarget] = useState(null);
+  const [removeReason, setRemoveReason] = useState('');
+
   // Load site settings
   useEffect(() => {
     (async () => {
@@ -1210,6 +1635,23 @@ function AdminPanel({ addToast }) {
     return unsub;
   }, []);
 
+  // Helper to create notification for a user
+  const createNotification = async (userId, message, type) => {
+    try {
+      const notifId = genId();
+      await setDoc(doc(db, 'notifications', notifId), {
+        id: notifId,
+        userId,
+        message,
+        type,
+        read: false,
+        createdAt: serverTimestamp(),
+      });
+    } catch (err) {
+      console.error('Failed to create notification:', err);
+    }
+  };
+
   const updateStatus = async (appId, status) => {
     try {
       const updateData = { status };
@@ -1217,6 +1659,16 @@ function AdminPanel({ addToast }) {
         updateData.acceptedAt = serverTimestamp();
       }
       await updateDoc(doc(db, 'applications', appId), updateData);
+
+      // Find the app to get userId
+      const app = apps.find(a => a.id === appId);
+      if (app?.userId) {
+        const msg = status === 'accepted'
+          ? '🎉 Your server application has been accepted! You are now whitelisted.'
+          : '❌ Your server application has been declined.';
+        await createNotification(app.userId, msg, status);
+      }
+
       addToast(`Application ${status === 'accepted' ? 'accepted ✅' : 'declined ❌'}`, status === 'accepted' ? 'success' : 'error');
     } catch {
       addToast('Failed to update application status.', 'error');
@@ -1230,12 +1682,43 @@ function AdminPanel({ addToast }) {
         status: 'declined',
         declineReason: declineReason,
       });
+
+      const app = apps.find(a => a.id === declineTarget);
+      if (app?.userId) {
+        const reasonText = declineReason ? ` Reason: ${declineReason}` : '';
+        await createNotification(app.userId, `❌ Your server application has been declined.${reasonText}`, 'declined');
+      }
+
       addToast('Application declined ❌', 'error');
     } catch {
       addToast('Failed to decline application.', 'error');
     }
     setDeclineTarget(null);
     setDeclineReason('');
+  };
+
+  // Remove from whitelist handler
+  const handleRemoveConfirm = async () => {
+    if (!removeTarget) return;
+    try {
+      await updateDoc(doc(db, 'applications', removeTarget), {
+        status: 'declined',
+        declineReason: removeReason || 'Removed from whitelist by admin',
+        acceptedAt: null,
+      });
+
+      const app = apps.find(a => a.id === removeTarget);
+      if (app?.userId) {
+        const reasonText = removeReason ? ` Reason: ${removeReason}` : '';
+        await createNotification(app.userId, `⚠️ You have been removed from the whitelist.${reasonText}`, 'removed');
+      }
+
+      addToast('Player removed from whitelist', 'info');
+    } catch {
+      addToast('Failed to remove from whitelist.', 'error');
+    }
+    setRemoveTarget(null);
+    setRemoveReason('');
   };
 
   // Site settings handlers
@@ -1266,13 +1749,12 @@ function AdminPanel({ addToast }) {
     setBgUploading(false);
   };
 
-  // Reset all applications — supports >500 docs with multiple batches
+  // Reset all applications
   const handleResetAll = async () => {
     if (resetConfirm !== 'RESET') return;
     try {
       const snap = await getDocs(collection(db, 'applications'));
       const docs = snap.docs;
-      // Split into batches of 500 (Firestore limit)
       for (let i = 0; i < docs.length; i += FIRESTORE_BATCH_LIMIT) {
         const batch = writeBatch(db);
         const chunk = docs.slice(i, i + FIRESTORE_BATCH_LIMIT);
@@ -1610,18 +2092,26 @@ function AdminPanel({ addToast }) {
                   </div>
 
                   {/* Actions */}
-                  {app.status === 'pending' && (
-                    <div className="flex md:flex-col gap-2 flex-shrink-0">
-                      <button onClick={() => updateStatus(app.id, 'accepted')}
-                        className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30 transition-all text-sm font-medium animate-btn-press">
-                        <Check size={16}/> Accept
+                  <div className="flex md:flex-col gap-2 flex-shrink-0">
+                    {app.status === 'pending' && (
+                      <>
+                        <button onClick={() => updateStatus(app.id, 'accepted')}
+                          className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30 transition-all text-sm font-medium animate-btn-press">
+                          <Check size={16}/> Accept
+                        </button>
+                        <button onClick={() => { setDeclineTarget(app.id); setDeclineReason(''); }}
+                          className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-red-600/20 text-red-400 hover:bg-red-600/30 transition-all text-sm font-medium animate-btn-press">
+                          <XCircle size={16}/> Decline
+                        </button>
+                      </>
+                    )}
+                    {app.status === 'accepted' && (
+                      <button onClick={() => { setRemoveTarget(app.id); setRemoveReason(''); }}
+                        className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-yellow-600/20 text-yellow-400 hover:bg-yellow-600/30 transition-all text-sm font-medium animate-btn-press">
+                        <UserX size={16}/> Remove
                       </button>
-                      <button onClick={() => { setDeclineTarget(app.id); setDeclineReason(''); }}
-                        className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-red-600/20 text-red-400 hover:bg-red-600/30 transition-all text-sm font-medium animate-btn-press">
-                        <XCircle size={16}/> Decline
-                      </button>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
@@ -1675,6 +2165,31 @@ function AdminPanel({ addToast }) {
                 <button onClick={handleDeclineConfirm}
                   className="flex-1 py-2.5 rounded-lg bg-red-600 hover:bg-red-500 text-white font-medium transition-all text-sm">
                   Confirm Decline
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Remove from Whitelist Modal */}
+        {removeTarget && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+            <div className="w-full max-w-md glass rounded-2xl p-8 animate-fade-in">
+              <h3 className="text-xl font-bold text-yellow-400 mb-2">Remove from Whitelist</h3>
+              <p className="text-gray-400 text-sm mb-4">
+                This will remove the player from the whitelist and set their status to declined. They will be notified.
+              </p>
+              <textarea value={removeReason} onChange={e => setRemoveReason(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-600 focus:outline-none focus:border-yellow-500/50 transition text-sm mb-4"
+                rows={3} placeholder="Reason for removal (optional)..."/>
+              <div className="flex gap-3">
+                <button onClick={() => { setRemoveTarget(null); setRemoveReason(''); }}
+                  className="flex-1 py-2.5 rounded-lg glass glass-hover text-gray-300 font-medium transition-all text-sm">
+                  Cancel
+                </button>
+                <button onClick={handleRemoveConfirm}
+                  className="flex-1 py-2.5 rounded-lg bg-yellow-600 hover:bg-yellow-500 text-white font-medium transition-all text-sm">
+                  Confirm Remove
                 </button>
               </div>
             </div>
@@ -1775,7 +2290,7 @@ function MembersPage() {
             <Users size={28} className="text-orange-400"/> Server Members
           </h1>
           {!loading && members.length > 0 && (
-            <p className="text-xl text-orange-300 font-semibold mt-3">🏰 {members.length} Member{members.length !== 1 ? 's' : ''} and counting</p>
+            <p className="text-xl text-orange-300 font-semibold mt-3">&#127984; {members.length} Member{members.length !== 1 ? 's' : ''} and counting</p>
           )}
           {!loading && members.length === 0 && (
             <p className="text-gray-500">Players who have been accepted into the server.</p>
@@ -1850,6 +2365,7 @@ export default function App() {
   const [transitioning, setTransitioning] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
   const [siteSettings, setSiteSettings] = useState({});
+  const [notifications, setNotifications] = useState([]);
 
   // Listen for site settings
   useEffect(() => {
@@ -1862,6 +2378,38 @@ export default function App() {
     });
     return unsub;
   }, []);
+
+  // Listen for notifications (for logged-in non-admin users)
+  useEffect(() => {
+    if (!user || user.isAdmin) {
+      return;
+    }
+    const q = query(
+      collection(db, 'notifications'),
+      where('userId', '==', user.id)
+    );
+    const unsub = onSnapshot(q, (snap) => {
+      const notifs = snap.docs.map(d => {
+        const data = d.data();
+        return {
+          id: d.id,
+          ...data,
+          timeAgo: timeAgo(data.createdAt),
+        };
+      });
+      notifs.sort((a, b) => {
+        const getTime = (ts) => {
+          if (!ts) return 0;
+          return ts.toDate ? ts.toDate().getTime() : new Date(ts).getTime();
+        };
+        return getTime(b.createdAt) - getTime(a.createdAt);
+      });
+      setNotifications(notifs);
+    }, (err) => {
+      console.error('Failed to load notifications:', err);
+    });
+    return unsub;
+  }, [user]);
 
   // Listen for Firebase auth state changes (persists across refreshes)
   useEffect(() => {
@@ -1944,6 +2492,14 @@ export default function App() {
     addToast('Logged out successfully.', 'info');
   }, [navigate, addToast]);
 
+  const handleMarkNotifRead = useCallback(async (notifId) => {
+    try {
+      await updateDoc(doc(db, 'notifications', notifId), { read: true });
+    } catch (err) {
+      console.error('Failed to mark notification as read:', err);
+    }
+  }, []);
+
   // Background image style from site settings
   const bgStyle = siteSettings.backgroundImage ? {
     backgroundImage: `url(${siteSettings.backgroundImage})`,
@@ -1980,18 +2536,20 @@ export default function App() {
   };
 
   return (
-    <div className="relative min-h-screen bg-[#0a0a0a] text-gray-200" style={bgStyle}>
+    <div className="relative min-h-screen bg-[#0a0a0a] text-gray-200 flex flex-col" style={bgStyle}>
       <Particles/>
-      <Navbar page={page} setPage={navigate} user={user} onLogout={handleLogout}/>
+      <Navbar page={page} setPage={navigate} user={user} onLogout={handleLogout}
+        notifications={notifications} onMarkNotifRead={handleMarkNotifRead}/>
       <ToastContainer toasts={toasts} removeToast={removeToast}/>
       {siteSettings.announcementEnabled && siteSettings.announcement && (
         <div className="fixed top-16 left-0 right-0 z-40 bg-orange-600/90 backdrop-blur text-white text-center py-2 px-4 text-sm flex items-center justify-center gap-2">
           <Megaphone size={14}/> {siteSettings.announcement}
         </div>
       )}
-      <div className={`transition-opacity duration-200 ${transitioning ? 'opacity-0' : 'opacity-100'}`}>
+      <div className={`flex-1 transition-opacity duration-200 ${transitioning ? 'opacity-0' : 'opacity-100'}`}>
         {renderPage()}
       </div>
+      <Footer siteSettings={siteSettings}/>
     </div>
   );
 }
