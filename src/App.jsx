@@ -1219,7 +1219,8 @@ function AdminPanel({ addToast }) {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `malaysmp-applications-${new Date().toISOString().slice(0, 10)}.csv`;
+    const prefix = (localSettings.serverName || 'MalaySMP').toLowerCase().replace(/\s+/g, '-');
+    link.download = `${prefix}-applications-${new Date().toISOString().slice(0, 10)}.csv`;
     link.click();
     URL.revokeObjectURL(url);
     addToast('CSV exported!', 'success');
