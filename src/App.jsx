@@ -345,7 +345,8 @@ function AuthPage({ mode, setPage, onAuth, addToast }) {
     setLoading(true);
     try {
       const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, provider);
+      addToast(`Signed in as ${result.user.email}`, 'success');
       // onAuthStateChanged in App handles profile check & navigation
     } catch (err) {
       if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
