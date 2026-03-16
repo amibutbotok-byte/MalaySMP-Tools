@@ -17,7 +17,7 @@ import {
   updateProfile,
   collection, doc, setDoc, getDoc, getDocs,
   updateDoc, deleteDoc, query, where, onSnapshot, writeBatch,
-  serverTimestamp, orderBy,
+  serverTimestamp,
   storageRef, uploadBytes, getDownloadURL,
 } from './firebase.js';
 
@@ -32,6 +32,7 @@ const VOICECRAFT_LINK = 'https://github.com/AvionBlock/VoiceCraft/releases/tag/v
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || '';
 const FIRESTORE_BATCH_LIMIT = 500;
 const VALID_SKIN_DIMENSIONS = [[64, 64], [64, 128]];
+const DEFAULT_STEVE_SKIN = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAFDUlEQVR42u2a20sUURzH97+I/gzfeuipKIggelARBD1EQVBQD0FBRJeXIqMkMmsrK7O8pZm3NNdbbXXV9bL3mdnZ2ZnZ+8XvOTOr7ZjXnVlX54cfzO7szO75fM/5nXPmjEolISEhISEhISEhISEhMYe4CJYYweJ/fUFfCU4Y/PchScjCJfhXGAe/g5/AJ+AXkIEIDGJePAn/Ai6RR/AHCAt8RFjAfUbw6PsnkB/xKi8LfjEI1gEl4NteqkkvBS7jnf8I1zHOPwwJ/7gTenY2Ax+7d93ifayz62fB7CRy1Y8jP0poQw9/BAl8CjTCNdIh8vMrOK3ESAM58XNIAaV+x74fF/gXSk8rNEiHyNdPIm3wEw3IjdI+5pRK0F2dkN0IlGIPiL2u2HIOJ7vA3Kwq/hfOkR9AQTQH/IVHM+mfMpHAZN9JdjJG0E+k0bEQUomQINqU/RPqjd//g/SIJqHIv5VPkDrL+T89kmGzZ6FGxDhRPIGXH0PdMIvewE+x4f+0gvYwdOZmUQMILU40nnFhKu+x52Xm0mBU2OvUa7LE1oGqWflD/9n9uIEA+cR7GKu/QWQH9x3I+QA/6fPsxXq4f6r2MJ6aF2gxaLBrYlRNBv/g66z9OKBmn0G/I91IjbXCHF2wdH0gT1dlRPtcxp2vD8cCjzzjSYJ1+tVCHvgBH0J+nvTeCxJmEVPAwD0BbDbrBHPo7IhgS+FjqL5SIT8T5hyInOb6E6tGbqLnKJvRwR86TnG+v1j9xBJMl8FfCYNEeSWjHOQ9sSU6K3NdCBJyMQ2J+tQ7d5+dGBt1jN8pQVEyNITgdzBfgFwxPhYBKmSJaBJYxKCfuRZEXfJ/G2kH1uOdBkZF7LBNbRjJvVWdU3Sn2+LqoH+nXsS+ISnQ/x4VOl5sXq16EO8Dg7j/b9nJMgSAcIQEhISUrrBN2hVT7M2+Wp+qUmFz1aYK60mLTw3yfHR0fKSo+nT3c5OBjmYYyF8y81mZ3LBVqI7TxgS8k3f4mVlB0OjV/M0Kt2GUJVLJ/PcmpC9v/2f9jxfJX7z4l/5FPbLJVFSj+y1VwH3fJHybHQFP8zy8rp7MNJabnPYOd1/rMk/V6BRf3m0BO56KZzl7hbufeWf/T4+Z3v7tFXhd0HzKR4n3fCJPHwRNdJfZs6Bg3fUiY9VW8rNjhSXjEXpZ9cbb9fVq/7XTCKkLy3dGv3L7zfcq70WT9X0R/8+rR5Nj+9u7tO3u/f/6pOf/1uJ5KPDE2Y++4Pk3d5T+W1Zr9lVVHiCYj6X64HT9pN3Ln64YcvAOZUKavDCj0PbC/Z0U3M/03NLvXjKF3b8sHT3I84+kX1jVGEW/JWxYe3tN+ybWZp3SqFXaXXfnTmVbkNrnX3s6Yq/7DwTLm8MwS/KR/UDhUV+K44s2m4rdWj/UyLO78m38fzeSZm4qnp5Q7j5OqF4xpb2GPSxW41xz2OoZz5qwuE6hO8ZCwSr+28+TaR8Pw5wZEV4UKGp2ecAV2dfjhc5MQFHklkNAjkJ0SCGi1/5evbqwXGDp7RG7gVnGaFW50d4fSNd1h/tX/2OMJ3V4Dh1BXXLZN6I8yTyVZ+IZ7qFvlB2qJx4tNe8J3v+xPVDwFVw87gQ/o8Y/TCSHUYBJfEVBfhnJFKxX8E1+Bd/UOoIQkJCQkJCQkJCQkJCQkrxP3FH8/bMz1lLAAAAAElFTkSuQmCC';
 
 // ─── Helpers ───
 function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
@@ -1676,7 +1677,7 @@ function SkinViewer3D({ skinUrl, width = 150, height = 300 }) {
           canvas: canvasRef.current,
           width,
           height,
-          skin: skinUrl || 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAFDUlEQVR42u2a20sUURzH97+I/gzfeuipKIggelARBD1EQVBQD0FBRJeXIqMkMmsrK7O8pZm3NNdbbXXV9bL3mdnZ2ZnZ+8XvOTOr7ZjXnVlX54cfzO7szO75fM/5nXPmjEolISEhISEhISEhISEhMYe4CJYYweJ/fUFfCU4Y/PchScjCJfhXGAe/g5/AJ+AXkIEIDGJePAn/Ai6RR/AHCAt8RFjAfUbw6PsnkB/xKi8LfjEI1gEl4NteqkkvBS7jnf8I1zHOPwwJ/7gTenY2Ax+7d93ifayz62fB7CRy1Y8jP0poQw9/BAl8CjTCNdIh8vMrOK3ESAM58XNIAaV+x74fF/gXSk8rNEiHyNdPIm3wEw3IjdI+5pRK0F2dkN0IlGIPiL2u2HIOJ7vA3Kwq/hfOkR9AQTQH/IVHM+mfMpHAZN9JdjJG0E+k0bEQUomQINqU/RPqjd//g/SIJqHIv5VPkDrL+T89kmGzZ6FGxDhRPIGXH0PdMIvewE+x4f+0gvYwdOZmUQMILU40nnFhKu+x52Xm0mBU2OvUa7LE1oGqWflD/9n9uIEA+cR7GKu/QWQH9x3I+QA/6fPsxXq4f6r2MJ6aF2gxaLBrYlRNBv/g66z9OKBmn0G/I91IjbXCHF2wdH0gT1dlRPtcxp2vD8cCjzzjSYJ1+tVCHvgBH0J+nvTeCxJmEVPAwD0BbDbrBHPo7IhgS+FjqL5SIT8T5hyInOb6E6tGbqLnKJvRwR86TnG+v1j9xBJMl8FfCYNEeSWjHOQ9sSU6K3NdCBJyMQ2J+tQ7d5+dGBt1jN8pQVEyNITgdzBfgFwxPhYBKmSJaBJYxKCfuRZEXfJ/G2kH1uOdBkZF7LBNbRjJvVWdU3Sn2+LqoH+nXsS+ISnQ/x4VOl5sXq16EO8Dg7j/b9nJMgSAcIQEhISUrrBN2hVT7M2+Wp+qUmFz1aYK60mLTw3yfHR0fKSo+nT3c5OBjmYYyF8y81mZ3LBVqI7TxgS8k3f4mVlB0OjV/M0Kt2GUJVLJ/PcmpC9v/2f9jxfJX7z4l/5FPbLJVFSj+y1VwH3fJHybHQFP8zy8rp7MNJabnPYOd1/rMk/V6BRf3m0BO56KZzl7hbufeWf/T4+Z3v7tFXhd0HzKR4n3fCJPHwRNdJfZs6Bg3fUiY9VW8rNjhSXjEXpZ9cbb9fVq/7XTCKkLy3dGv3L7zfcq70WT9X0R/8+rR5Nj+9u7tO3u/f/6pOf/1uJ5KPDE2Y++4Pk3d5T+W1Zr9lVVHiCYj6X64HT9pN3Ln64YcvAOZUKavDCj0PbC/Z0U3M/03NLvXjKF3b8sHT3I84+kX1jVGEW/JWxYe3tN+ybWZp3SqFXaXXfnTmVbkNrnX3s6Yq/7DwTLm8MwS/KR/UDhUV+K44s2m4rdWj/UyLO78m38fzeSZm4qnp5Q7j5OqF4xpb2GPSxW41xz2OoZz5qwuE6hO8ZCwSr+28+TaR8Pw5wZEV4UKGp2ecAV2dfjhc5MQFHklkNAjkJ0SCGi1/5evbqwXGDp7RG7gVnGaFW50d4fSNd1h/tX/2OMJ3V4Dh1BXXLZN6I8yTyVZ+IZ7qFvlB2qJx4tNe8J3v+xPVDwFVw87gQ/o8Y/TCSHUYBJfEVBfhnJFKxX8E1+Bd/UOoIQkJCQkJCQkJCQkJCQkrxP3FH8/bMz1lLAAAAAElFTkSuQmCC',
+          skin: skinUrl || DEFAULT_STEVE_SKIN,
         });
         viewer.autoRotate = true;
         viewer.autoRotateSpeed = 0.5;
@@ -1712,11 +1713,20 @@ function MembersPage() {
       try {
         const q = query(
           collection(db, 'applications'),
-          where('status', '==', 'accepted'),
-          orderBy('acceptedAt', 'asc')
+          where('status', '==', 'accepted')
         );
         const snap = await getDocs(q);
-        setMembers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        data.sort((a, b) => {
+          const getTime = (t) => {
+            if (!t) return Infinity;
+            if (typeof t.toMillis === 'function') return t.toMillis();
+            if (t.seconds) return t.seconds * 1000;
+            return Infinity;
+          };
+          return getTime(a.acceptedAt) - getTime(b.acceptedAt);
+        });
+        setMembers(data);
       } catch (err) {
         console.error('Failed to load members:', err);
       }
