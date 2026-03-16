@@ -6,6 +6,8 @@ import {
   sendEmailVerification,
   signOut,
   onAuthStateChanged,
+  GoogleAuthProvider,
+  signInWithPopup,
 } from 'firebase/auth';
 import {
   getFirestore,
@@ -50,6 +52,8 @@ export {
   sendEmailVerification,
   signOut,
   onAuthStateChanged,
+  GoogleAuthProvider,
+  signInWithPopup,
   collection,
   doc,
   setDoc,
