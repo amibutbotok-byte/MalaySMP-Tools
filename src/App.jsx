@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Flame, Shield, Users, Star, Youtube, MessageCircle, Heart, ExternalLink,
   LogIn, UserPlus, LogOut, Menu, X, ChevronRight, Send, Upload, Check,
@@ -17,7 +17,7 @@ import {
   updateProfile,
   collection, doc, setDoc, getDoc, getDocs,
   updateDoc, deleteDoc, query, where, onSnapshot, writeBatch,
-  serverTimestamp,
+  serverTimestamp, orderBy,
   storageRef, uploadBytes, getDownloadURL,
 } from './firebase.js';
 
@@ -536,6 +536,8 @@ function ApplicationForm({ user, addToast, setPage, editData, onResubmit }) {
           id: appId,
           userId: user.id,
           email: user.email,
+          photoURL: user.photoURL || '',
+          displayName: user.displayName || '',
           status: 'pending',
           submittedAt: serverTimestamp(),
           ...form,
@@ -1186,7 +1188,11 @@ function AdminPanel({ addToast }) {
 
   const updateStatus = async (appId, status) => {
     try {
-      await updateDoc(doc(db, 'applications', appId), { status });
+      const updateData = { status };
+      if (status === 'accepted') {
+        updateData.acceptedAt = serverTimestamp();
+      }
+      await updateDoc(doc(db, 'applications', appId), updateData);
       addToast(`Application ${status === 'accepted' ? 'accepted ✅' : 'declined ❌'}`, status === 'accepted' ? 'success' : 'error');
     } catch {
       addToast('Failed to update application status.', 'error');
@@ -1655,6 +1661,47 @@ function AdminPanel({ addToast }) {
   );
 }
 
+// ─── Skin Viewer Component ───
+function SkinViewer3D({ skinUrl, width = 150, height = 300 }) {
+  const canvasRef = useRef(null);
+  const viewerRef = useRef(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const skinview3d = await import('skinview3d');
+        if (cancelled || !canvasRef.current) return;
+        const viewer = new skinview3d.SkinViewer({
+          canvas: canvasRef.current,
+          width,
+          height,
+          skin: skinUrl || 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAFDUlEQVR42u2a20sUURzH97+I/gzfeuipKIggelARBD1EQVBQD0FBRJeXIqMkMmsrK7O8pZm3NNdbbXXV9bL3mdnZ2ZnZ+8XvOTOr7ZjXnVlX54cfzO7szO75fM/5nXPmjEolISEhISEhISEhISEhMYe4CJYYweJ/fUFfCU4Y/PchScjCJfhXGAe/g5/AJ+AXkIEIDGJePAn/Ai6RR/AHCAt8RFjAfUbw6PsnkB/xKi8LfjEI1gEl4NteqkkvBS7jnf8I1zHOPwwJ/7gTenY2Ax+7d93ifayz62fB7CRy1Y8jP0poQw9/BAl8CjTCNdIh8vMrOK3ESAM58XNIAaV+x74fF/gXSk8rNEiHyNdPIm3wEw3IjdI+5pRK0F2dkN0IlGIPiL2u2HIOJ7vA3Kwq/hfOkR9AQTQH/IVHM+mfMpHAZN9JdjJG0E+k0bEQUomQINqU/RPqjd//g/SIJqHIv5VPkDrL+T89kmGzZ6FGxDhRPIGXH0PdMIvewE+x4f+0gvYwdOZmUQMILU40nnFhKu+x52Xm0mBU2OvUa7LE1oGqWflD/9n9uIEA+cR7GKu/QWQH9x3I+QA/6fPsxXq4f6r2MJ6aF2gxaLBrYlRNBv/g66z9OKBmn0G/I91IjbXCHF2wdH0gT1dlRPtcxp2vD8cCjzzjSYJ1+tVCHvgBH0J+nvTeCxJmEVPAwD0BbDbrBHPo7IhgS+FjqL5SIT8T5hyInOb6E6tGbqLnKJvRwR86TnG+v1j9xBJMl8FfCYNEeSWjHOQ9sSU6K3NdCBJyMQ2J+tQ7d5+dGBt1jN8pQVEyNITgdzBfgFwxPhYBKmSJaBJYxKCfuRZEXfJ/G2kH1uOdBkZF7LBNbRjJvVWdU3Sn2+LqoH+nXsS+ISnQ/x4VOl5sXq16EO8Dg7j/b9nJMgSAcIQEhISUrrBN2hVT7M2+Wp+qUmFz1aYK60mLTw3yfHR0fKSo+nT3c5OBjmYYyF8y81mZ3LBVqI7TxgS8k3f4mVlB0OjV/M0Kt2GUJVLJ/PcmpC9v/2f9jxfJX7z4l/5FPbLJVFSj+y1VwH3fJHybHQFP8zy8rp7MNJabnPYOd1/rMk/V6BRf3m0BO56KZzl7hbufeWf/T4+Z3v7tFXhd0HzKR4n3fCJPHwRNdJfZs6Bg3fUiY9VW8rNjhSXjEXpZ9cbb9fVq/7XTCKkLy3dGv3L7zfcq70WT9X0R/8+rR5Nj+9u7tO3u/f/6pOf/1uJ5KPDE2Y++4Pk3d5T+W1Zr9lVVHiCYj6X64HT9pN3Ln64YcvAOZUKavDCj0PbC/Z0U3M/03NLvXjKF3b8sHT3I84+kX1jVGEW/JWxYe3tN+ybWZp3SqFXaXXfnTmVbkNrnX3s6Yq/7DwTLm8MwS/KR/UDhUV+K44s2m4rdWj/UyLO78m38fzeSZm4qnp5Q7j5OqF4xpb2GPSxW41xz2OoZz5qwuE6hO8ZCwSr+28+TaR8Pw5wZEV4UKGp2ecAV2dfjhc5MQFHklkNAjkJ0SCGi1/5evbqwXGDp7RG7gVnGaFW50d4fSNd1h/tX/2OMJ3V4Dh1BXXLZN6I8yTyVZ+IZ7qFvlB2qJx4tNe8J3v+xPVDwFVw87gQ/o8Y/TCSHUYBJfEVBfhnJFKxX8E1+Bd/UOoIQkJCQkJCQkJCQkJCQkrxP3FH8/bMz1lLAAAAAElFTkSuQmCC',
+        });
+        viewer.autoRotate = true;
+        viewer.autoRotateSpeed = 0.5;
+        viewer.animation = new skinview3d.WalkingAnimation();
+        viewer.animation.speed = 0.3;
+        viewer.camera.rotation.x = -0.1;
+        viewer.camera.rotation.y = 0.5;
+        viewer.zoom = 0.9;
+        viewerRef.current = viewer;
+      } catch (err) {
+        console.error('Failed to load skin viewer:', err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+      if (viewerRef.current) {
+        viewerRef.current.dispose();
+        viewerRef.current = null;
+      }
+    };
+  }, [skinUrl, width, height]);
+
+  return <canvas ref={canvasRef} className="mx-auto rounded-lg"/>;
+}
+
 // ─── Members Page (Public) ───
 function MembersPage() {
   const [members, setMembers] = useState([]);
@@ -1663,7 +1710,11 @@ function MembersPage() {
   useEffect(() => {
     (async () => {
       try {
-        const q = query(collection(db, 'applications'), where('status', '==', 'accepted'));
+        const q = query(
+          collection(db, 'applications'),
+          where('status', '==', 'accepted'),
+          orderBy('acceptedAt', 'asc')
+        );
         const snap = await getDocs(q);
         setMembers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
       } catch (err) {
@@ -1673,23 +1724,42 @@ function MembersPage() {
     })();
   }, []);
 
+  const formatAcceptedDate = (acceptedAt) => {
+    if (!acceptedAt) return 'Date unavailable';
+    try {
+      const date = acceptedAt.toDate ? acceptedAt.toDate() : new Date(acceptedAt);
+      return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+    } catch {
+      return 'Date unavailable';
+    }
+  };
+
   return (
-    <div className="min-h-screen pt-24 pb-12 px-4 max-w-6xl mx-auto">
+    <div className="min-h-screen pt-24 pb-12 px-4 max-w-7xl mx-auto">
       <div className="animate-fade-in">
         <div className="text-center mb-10">
           <h1 className="text-3xl font-bold text-white mb-2 flex items-center justify-center gap-3">
             <Users size={28} className="text-orange-400"/> Server Members
           </h1>
-          <p className="text-gray-500">Players who have been accepted into the server.</p>
+          {!loading && members.length > 0 && (
+            <p className="text-xl text-orange-300 font-semibold mt-3">🏰 {members.length} Member{members.length !== 1 ? 's' : ''} and counting</p>
+          )}
+          {!loading && members.length === 0 && (
+            <p className="text-gray-500">Players who have been accepted into the server.</p>
+          )}
         </div>
 
         {loading ? (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[1,2,3,4,5,6].map(i => (
-              <div key={i} className="glass rounded-xl p-6 space-y-3">
-                <Skeleton className="h-16 w-16 rounded-lg mx-auto"/>
-                <Skeleton className="h-5 w-32 mx-auto"/>
-                <Skeleton className="h-4 w-24 mx-auto"/>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {[1,2,3,4,5,6,7,8].map(i => (
+              <div key={i} className="glass rounded-xl p-5 space-y-3">
+                <div className="flex justify-between items-start">
+                  <Skeleton className="h-10 w-10 rounded-full"/>
+                  <Skeleton className="h-5 w-16 rounded-full"/>
+                </div>
+                <Skeleton className="h-[300px] w-[150px] mx-auto rounded-lg"/>
+                <Skeleton className="h-6 w-32 mx-auto"/>
+                <Skeleton className="h-4 w-40 mx-auto"/>
               </div>
             ))}
           </div>
@@ -1699,20 +1769,37 @@ function MembersPage() {
             <p className="text-gray-500">No accepted members yet.</p>
           </div>
         ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {members.map(m => (
-              <div key={m.id} className="glass glass-hover rounded-xl p-6 text-center transition-all">
-                {m.skinPreview ? (
-                  <img src={m.skinPreview} alt={m.gamertag} className="w-16 h-16 rounded-lg mx-auto mb-3 border border-white/10 pixel-art"/>
-                ) : (
-                  <div className="w-16 h-16 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-gray-600 mx-auto mb-3">
-                    <Gamepad2 size={28}/>
-                  </div>
-                )}
-                <h3 className="text-white font-semibold text-lg">{m.gamertag}</h3>
-                <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-400">
-                  Whitelisted
-                </span>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {members.map((m, idx) => (
+              <div key={m.id}
+                className="glass rounded-xl p-5 text-center transition-all duration-300 hover:border-orange-500/40 hover:shadow-[0_0_15px_rgba(249,115,22,0.15)]"
+              >
+                {/* Top row: Google avatar + Member # badge */}
+                <div className="flex justify-between items-start mb-3">
+                  {m.photoURL ? (
+                    <img src={m.photoURL} alt="" className="w-10 h-10 rounded-full border-2 border-orange-500/30 object-cover"/>
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-white/5 border-2 border-white/10 flex items-center justify-center text-gray-500">
+                      <User size={18}/>
+                    </div>
+                  )}
+                  <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-orange-500/20 text-orange-400 border border-orange-500/30">
+                    #{idx + 1}
+                  </span>
+                </div>
+
+                {/* 3D Skin Viewer */}
+                <div className="mb-3">
+                  <SkinViewer3D skinUrl={m.skinPreview || null} width={150} height={300}/>
+                </div>
+
+                {/* Minecraft Username */}
+                <h3 className="text-white font-bold text-lg leading-tight">{m.gamertag}</h3>
+
+                {/* Whitelisted Date */}
+                <p className="text-gray-500 text-xs mt-1.5">
+                  Whitelisted: {formatAcceptedDate(m.acceptedAt)}
+                </p>
               </div>
             ))}
           </div>
