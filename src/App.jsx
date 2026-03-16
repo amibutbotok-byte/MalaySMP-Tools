@@ -30,6 +30,8 @@ const SOCIAL_LINKS = {
 };
 const VOICECRAFT_LINK = 'https://github.com/AvionBlock/VoiceCraft/releases/tag/v1.4.0';
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || '';
+const MIN_DECLINE_REASON_LENGTH = 10;
+const FIRESTORE_BATCH_LIMIT = 500;
 
 // ─── Helpers ───
 function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
@@ -1192,7 +1194,7 @@ function AdminPanel({ addToast }) {
   };
 
   const handleDeclineConfirm = async () => {
-    if (!declineTarget || declineReason.length < 10) return;
+    if (!declineTarget || declineReason.length < MIN_DECLINE_REASON_LENGTH) return;
     try {
       await updateDoc(doc(db, 'applications', declineTarget), {
         status: 'declined',
@@ -1241,9 +1243,9 @@ function AdminPanel({ addToast }) {
       const snap = await getDocs(collection(db, 'applications'));
       const docs = snap.docs;
       // Split into batches of 500 (Firestore limit)
-      for (let i = 0; i < docs.length; i += 500) {
+      for (let i = 0; i < docs.length; i += FIRESTORE_BATCH_LIMIT) {
         const batch = writeBatch(db);
-        const chunk = docs.slice(i, i + 500);
+        const chunk = docs.slice(i, i + FIRESTORE_BATCH_LIMIT);
         chunk.forEach(d => batch.delete(d.ref));
         await batch.commit();
       }
@@ -1635,13 +1637,13 @@ function AdminPanel({ addToast }) {
               <textarea value={declineReason} onChange={e => setDeclineReason(e.target.value)}
                 className="w-full px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-600 focus:outline-none focus:border-red-500/50 transition text-sm mb-1"
                 rows={4} placeholder="Reason for declining (minimum 10 characters)..."/>
-              <p className="text-xs text-gray-500 mb-4">{declineReason.length}/10 characters minimum</p>
+              <p className="text-xs text-gray-500 mb-4">{declineReason.length}/{MIN_DECLINE_REASON_LENGTH} characters minimum</p>
               <div className="flex gap-3">
                 <button onClick={() => { setDeclineTarget(null); setDeclineReason(''); }}
                   className="flex-1 py-2.5 rounded-lg glass glass-hover text-gray-300 font-medium transition-all text-sm">
                   Cancel
                 </button>
-                <button onClick={handleDeclineConfirm} disabled={declineReason.length < 10}
+                <button onClick={handleDeclineConfirm} disabled={declineReason.length < MIN_DECLINE_REASON_LENGTH}
                   className="flex-1 py-2.5 rounded-lg bg-red-600 hover:bg-red-500 disabled:opacity-30 disabled:cursor-not-allowed text-white font-medium transition-all text-sm">
                   Confirm Decline
                 </button>
