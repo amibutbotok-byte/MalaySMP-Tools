@@ -1284,7 +1284,7 @@ function AdminPanel({ addToast }) {
           <button onClick={() => setSettingsOpen(!settingsOpen)}
             className="w-full flex items-center justify-between px-5 py-3 glass rounded-xl text-white hover:bg-white/5 transition-all">
             <span className="flex items-center gap-2 font-semibold">
-              <Settings size={18} className="text-orange-400"/> ⚙ Site Settings
+              <Settings size={18} className="text-orange-400"/> Site Settings
             </span>
             <ChevronRight size={18} className={`text-gray-400 transition-transform duration-200 ${settingsOpen ? 'rotate-90' : ''}`}/>
           </button>
