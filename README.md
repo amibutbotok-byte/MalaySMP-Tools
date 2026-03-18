@@ -15,6 +15,8 @@ Built with **Vite + React + Tailwind CSS v4 + Firebase** — all in a single `sr
 - 📋 Server application form (gamertag, Discord ID, skin upload, VoiceCraft confirmation, …)
 - 🛡️ Admin panel — review, accept, or decline applications with search & filters (real-time updates)
 - 📊 Application status page for members (updates in real-time)
+- 👥 **Members page (Whitelisted Players)** — accessible to everyone: visitors, logged-in users, and admins
+- 📅 **Event list** — admin can create multiple events; users choose which event to apply for
 - 🔔 Toast notifications, smooth page transitions, fully responsive
 
 ---
@@ -77,13 +79,33 @@ service cloud.firestore {
       allow update: if request.auth != null
                     && request.auth.token.email == 'YOUR_ADMIN_EMAIL_HERE';
     }
+
+    // Events — anyone can read, admin can write
+    match /events/{eventId} {
+      allow read:  if true;
+      allow write: if request.auth != null
+                   && request.auth.token.email == 'YOUR_ADMIN_EMAIL_HERE';
+    }
+
+    // Notifications — users can read/update their own, admin can write
+    match /notifications/{notifId} {
+      allow read, update: if request.auth != null
+                          && resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null
+                    && request.auth.token.email == 'YOUR_ADMIN_EMAIL_HERE';
+    }
   }
 }
 ```
 
-> **Important:** Replace `YOUR_ADMIN_EMAIL_HERE` with your real admin email in **both** places above.
+> **Important:** Replace `YOUR_ADMIN_EMAIL_HERE` with your real admin email in **all three** places above.
 
 Click **Publish**.
+
+> **Tip — Whitelisted Players page:**
+> The Members page (whitelisted players) is now accessible to **everyone** — visitors, logged-in users, and admins — all from the navbar.
+> The Firestore rule `allow read: if resource.data.status == "accepted"` makes accepted applications publicly readable, which is what powers the Members page.
+> If your logged-in users cannot see the Members page, make sure you have updated to the latest Firestore rules above and clicked **Publish**.
 
 ### 5. Add Authorized Domains (for Google Sign-in)
 
@@ -221,9 +243,11 @@ The app uses **Firebase** for all data — every user shares the same database i
 1. **Landing page** — Open the site; browse as a visitor
 2. **Sign up** — Create an account (you will receive a verification email)
 3. **Verify email** — Click the link in the email, then refresh the app
-4. **Submit application** — Fill in the server application form
-5. **Check status** — Click "My Status" to see your application status (updates in real time)
-6. **Admin panel** — Log in with the email you set as `VITE_ADMIN_EMAIL` to review applications
+4. **View Members** — Click **"Members"** in the navbar to see whitelisted players (works for visitors, logged-in users, and admins)
+5. **Create events (admin)** — Log in as admin, open **"Event Management"** in the admin panel, and create one or more events
+6. **Submit application** — Log in as a regular user, go to the Dashboard, pick an event, and fill in the application form
+7. **Check status** — Click "My Status" to see your application status (updates in real time)
+8. **Admin panel** — Log in with the email you set as `VITE_ADMIN_EMAIL` to review applications (filter by event, accept/decline)
 
 ---
 
