@@ -203,11 +203,13 @@ function Navbar({ page, setPage, user, onLogout, notifications, onMarkNotifRead 
       { label: 'Dashboard', icon: <Settings size={16}/>, page: 'admin' },
       { label: 'Events', icon: <CalendarDays size={16}/>, page: 'events' },
       { label: 'Members', icon: <Users size={16}/>, page: 'members' },
+      { label: 'Server', icon: <Globe size={16}/>, page: 'server' },
     ] : [
       { label: 'Home', icon: <Home size={16}/>, page: 'landing' },
       { label: 'Dashboard', icon: <LayoutDashboard size={16}/>, page: 'dashboard' },
       { label: 'Events', icon: <CalendarDays size={16}/>, page: 'events' },
       { label: 'Members', icon: <Users size={16}/>, page: 'members' },
+      { label: 'Server', icon: <Globe size={16}/>, page: 'server' },
       { label: 'Profile', icon: <User size={16}/>, page: 'profile' },
     ]
   ) : [
@@ -2346,9 +2348,29 @@ function AdminPanel({ addToast }) {
               <div key={app.id} className="glass glass-hover rounded-xl p-5 transition-all">
                 <div className="flex flex-col md:flex-row md:items-start gap-4">
                   {/* Skin preview */}
-                  <div className="flex-shrink-0">
+                  <div className="flex-shrink-0 group/skin relative">
                     {app.skinPreview ? (
-                      <img src={app.skinPreview} alt="Skin" className="w-16 h-16 rounded-lg border border-white/10 pixel-art"/>
+                      <>
+                        <img src={app.skinPreview} alt="Skin" className="w-16 h-16 rounded-lg border border-white/10 pixel-art"/>
+                        <button onClick={() => {
+                          const link = document.createElement('a');
+                          link.download = `${app.gamertag || 'skin'}.png`;
+                          if (app.skinPreview.startsWith('data:')) {
+                            link.href = app.skinPreview;
+                            link.click();
+                          } else {
+                            fetch(app.skinPreview).then(r => r.blob()).then(blob => {
+                              link.href = URL.createObjectURL(blob);
+                              link.click();
+                              URL.revokeObjectURL(link.href);
+                            }).catch(() => window.open(app.skinPreview, '_blank'));
+                          }
+                        }}
+                          className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg opacity-0 group-hover/skin:opacity-100 transition-opacity cursor-pointer"
+                          title="Download skin">
+                          <Download size={18} className="text-white"/>
+                        </button>
+                      </>
                     ) : (
                       <div className="w-16 h-16 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-gray-600">
                         <Gamepad2 size={24}/>
@@ -2497,6 +2519,122 @@ function AdminPanel({ addToast }) {
                   Confirm Remove
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Server Page (Authenticated) ───
+function ServerPage({ user, setPage }) {
+  return (
+    <div className="min-h-screen pt-24 pb-12 px-4 max-w-3xl mx-auto">
+      <div className="animate-fade-in">
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 rounded-2xl bg-orange-500/20 flex items-center justify-center mx-auto mb-4">
+            <Globe size={32} className="text-orange-400"/>
+          </div>
+          <h1 className="text-3xl font-bold text-white mb-2">Server Access</h1>
+          <p className="text-gray-500">Join our Discord community to get the server details.</p>
+        </div>
+
+        {/* Discord Requirement Card */}
+        <div className="glass rounded-2xl overflow-hidden mb-6">
+          <div className="bg-[#5865F2]/10 border-b border-[#5865F2]/20 px-6 py-4 flex items-center gap-3">
+            <MessageCircle size={22} className="text-[#5865F2]"/>
+            <h2 className="text-lg font-semibold text-white">Discord Required</h2>
+          </div>
+          <div className="p-6 space-y-5">
+            <p className="text-gray-300 leading-relaxed">
+              To access the <span className="text-orange-400 font-medium">MalaySMP</span> server, you must join our official Discord server.
+              All server information — including the <span className="text-white font-medium">IP address</span>, <span className="text-white font-medium">port</span>,
+              and <span className="text-white font-medium">latest news</span> — is shared exclusively on Discord.
+            </p>
+
+            {/* Steps */}
+            <div className="space-y-3">
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-white/5">
+                <div className="w-7 h-7 rounded-full bg-orange-500/20 text-orange-400 flex items-center justify-center flex-shrink-0 text-sm font-bold">1</div>
+                <div>
+                  <p className="text-white font-medium text-sm">Download Discord</p>
+                  <p className="text-gray-500 text-xs mt-0.5">If you don&apos;t have Discord yet, download it for free from the official website.</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-white/5">
+                <div className="w-7 h-7 rounded-full bg-orange-500/20 text-orange-400 flex items-center justify-center flex-shrink-0 text-sm font-bold">2</div>
+                <div>
+                  <p className="text-white font-medium text-sm">Join MalaySMP Discord</p>
+                  <p className="text-gray-500 text-xs mt-0.5">Click the button below to join our server and get access to all channels.</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-white/5">
+                <div className="w-7 h-7 rounded-full bg-orange-500/20 text-orange-400 flex items-center justify-center flex-shrink-0 text-sm font-bold">3</div>
+                <div>
+                  <p className="text-white font-medium text-sm">Get Whitelisted</p>
+                  <p className="text-gray-500 text-xs mt-0.5">Complete the application process and wait for admin approval. Once accepted, you&apos;ll find the server IP and connection details in Discord.</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <a href={SOCIAL_LINKS.discord} target="_blank" rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[#5865F2] hover:bg-[#4752C4] text-white font-semibold transition-all animate-btn-press text-sm">
+                <MessageCircle size={18}/> Join Discord Server
+              </a>
+              <a href="https://discord.com/download" target="_blank" rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-gray-300 font-medium transition-all text-sm">
+                <Download size={18}/> Download Discord App
+              </a>
+            </div>
+          </div>
+        </div>
+
+        {/* Info Cards */}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="glass rounded-xl p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <Shield size={18} className="text-orange-400"/>
+              <h3 className="text-white font-semibold text-sm">Whitelisted Server</h3>
+            </div>
+            <p className="text-gray-400 text-sm leading-relaxed">
+              MalaySMP is a whitelisted server. Only approved members can join. Submit your application
+              through the Dashboard and wait for admin approval.
+            </p>
+          </div>
+          <div className="glass rounded-xl p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <Bell size={18} className="text-orange-400"/>
+              <h3 className="text-white font-semibold text-sm">Server News &amp; Updates</h3>
+            </div>
+            <p className="text-gray-400 text-sm leading-relaxed">
+              Stay up to date with the latest server news, events, maintenance schedules,
+              and announcements — all posted in our Discord server.
+            </p>
+          </div>
+        </div>
+
+        {/* Quick Links */}
+        {user && (
+          <div className="mt-6 glass rounded-xl p-5">
+            <h3 className="text-white font-semibold text-sm mb-3 flex items-center gap-2">
+              <Link2 size={16} className="text-orange-400"/> Quick Links
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              <button onClick={() => setPage('dashboard')}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 text-xs transition-all">
+                <LayoutDashboard size={14}/> Go to Dashboard
+              </button>
+              <button onClick={() => setPage('events')}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 text-xs transition-all">
+                <CalendarDays size={14}/> View Events
+              </button>
+              <button onClick={() => setPage('members')}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 text-xs transition-all">
+                <Users size={14}/> View Members
+              </button>
             </div>
           </div>
         )}
@@ -3032,6 +3170,7 @@ export default function App() {
       case 'login': return user ? <Dashboard user={user} addToast={addToast} setPage={navigate}/> : <AuthPage addToast={addToast}/>;
       case 'members': return <MembersPage setPage={navigate}/>;
       case 'events': return <EventListPage setPage={navigate}/>;
+      case 'server': return <ServerPage user={user} setPage={navigate}/>;
       case 'setup-gamertag': return user ? <GamertagSetup user={user} onComplete={handleGamertagComplete} addToast={addToast}/> : <LandingPage setPage={navigate} siteSettings={siteSettings} user={user}/>;
       case 'dashboard': return user ? <Dashboard user={user} addToast={addToast} setPage={navigate}/> : <LandingPage setPage={navigate} siteSettings={siteSettings} user={user}/>;
       case 'status': return user ? <StatusPage user={user} setPage={navigate} addToast={addToast}/> : <LandingPage setPage={navigate} siteSettings={siteSettings} user={user}/>;
