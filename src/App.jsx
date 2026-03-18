@@ -1816,7 +1816,7 @@ function AdminPanel({ addToast }) {
       try {
         const ref = storageRef(storage, urlToDelete);
         await deleteObject(ref);
-      } catch { /* file may already be gone */ }
+      } catch (storageErr) { console.warn('Storage delete skipped:', storageErr.code || storageErr.message); }
       const updated = (ev.screenshots || []).filter((_, i) => i !== idx);
       await updateDoc(doc(db, 'events', ev.id), { screenshots: updated });
       addToast('Screenshot removed.', 'success');
@@ -2618,7 +2618,7 @@ function EventListPage({ setPage }) {
     <div className="min-h-screen pt-24 pb-12 px-4 max-w-4xl mx-auto">
       <div className="animate-fade-in">
         {setPage && (
-          <button onClick={() => setPage('dashboard')}
+          <button onClick={() => setPage('landing')}
             className="flex items-center gap-1.5 text-gray-400 hover:text-white mb-4 text-sm transition-colors">
             <ChevronRight size={16} className="rotate-180"/> Back
           </button>
