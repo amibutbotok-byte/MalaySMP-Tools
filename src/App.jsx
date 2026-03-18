@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   Flame, Shield, Users, Star, Youtube, MessageCircle, Heart, ExternalLink,
   LogIn, UserPlus, LogOut, Menu, X, ChevronRight, ChevronLeft, Send, Upload, Check,
@@ -6,6 +6,7 @@ import {
   Home, FileText, Settings, CheckCircle, AlertCircle, Sparkles,
   RefreshCw, Trash2, Download, Palette, Image, User, Megaphone, Type,
   ArrowUpDown, Edit, LayoutDashboard, Link2, BookOpen, SkipForward, UserX,
+  Calendar, Plus, CalendarDays, ToggleLeft, ToggleRight,
 } from 'lucide-react';
 import {
   auth, db, storage,
@@ -16,7 +17,7 @@ import {
   deleteUser,
   updateProfile,
   collection, doc, setDoc, getDoc, getDocs,
-  updateDoc, deleteDoc, query, where, onSnapshot, writeBatch,
+  updateDoc, deleteDoc, query, where, orderBy, onSnapshot, writeBatch,
   serverTimestamp,
   storageRef, uploadBytes, getDownloadURL,
 } from './firebase.js';
@@ -193,6 +194,7 @@ function Navbar({ page, setPage, user, onLogout, notifications, onMarkNotifRead 
     ] : [
       { label: 'Home', icon: <Home size={16}/>, page: 'landing' },
       { label: 'Dashboard', icon: <LayoutDashboard size={16}/>, page: 'dashboard' },
+      { label: 'Members', icon: <Users size={16}/>, page: 'members' },
       { label: 'Profile', icon: <User size={16}/>, page: 'profile' },
     ]
   ) : [
@@ -606,7 +608,7 @@ function StepProgress({ currentStep, totalSteps, stepLabels }) {
 }
 
 // ─── Application Form (Multi-Step Wizard) ───
-function ApplicationForm({ user, addToast, setPage, editData, onResubmit }) {
+function ApplicationForm({ user, addToast, setPage, editData, onResubmit, event }) {
   const [loading, setLoading] = useState(!editData);
   const [step, setStep] = useState(editData ? 1 : 0);
   const [form, setForm] = useState({
@@ -707,6 +709,8 @@ function ApplicationForm({ user, addToast, setPage, editData, onResubmit }) {
           declineReason: '',
           isResubmission: true,
           submittedAt: serverTimestamp(),
+          eventId: event?.id || editData?.eventId || '',
+          eventName: event?.name || editData?.eventName || '',
         });
         addToast('Application resubmitted! Please wait for admin review.', 'success');
         if (onResubmit) onResubmit();
@@ -720,6 +724,8 @@ function ApplicationForm({ user, addToast, setPage, editData, onResubmit }) {
           displayName: user.displayName || '',
           status: 'pending',
           submittedAt: serverTimestamp(),
+          eventId: event?.id || '',
+          eventName: event?.name || '',
           ...form,
         });
         setSubmitted(true);
@@ -1143,7 +1149,20 @@ function ApplicationForm({ user, addToast, setPage, editData, onResubmit }) {
 
 // ─── Member Dashboard ───
 function Dashboard({ user, addToast, setPage }) {
-  const [showApplication, setShowApplication] = useState(false);
+  const [events, setEvents] = useState([]);
+  const [selectedEvent, setSelectedEvent] = useState(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const q = query(collection(db, 'events'), where('active', '==', true), orderBy('createdAt', 'desc'));
+        const snap = await getDocs(q);
+        setEvents(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      } catch (err) {
+        console.error('Failed to load events:', err);
+      }
+    })();
+  }, []);
 
   const quickActions = [
     { label: 'My Status', desc: 'Check your application status', icon: <FileText size={24}/>, color: 'from-yellow-500/20 to-yellow-600/10 border-yellow-500/30 hover:border-yellow-400/50', iconColor: 'text-yellow-400', action: () => setPage('status') },
@@ -1189,24 +1208,47 @@ function Dashboard({ user, addToast, setPage }) {
           </div>
         </div>
 
-        {/* Apply / Application Section */}
+        {/* Apply / Events Section */}
         <div className="mb-8">
-          <button onClick={() => setShowApplication(!showApplication)}
-            className="w-full flex items-center justify-between px-5 py-4 glass rounded-xl text-white hover:bg-white/5 transition-all group">
-            <span className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center text-orange-400">
-                <Send size={20}/>
+          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <Calendar size={18} className="text-orange-400"/> Available Events
+          </h2>
+
+          {selectedEvent ? (
+            <div className="animate-fade-in">
+              <button onClick={() => setSelectedEvent(null)}
+                className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-orange-400 transition-colors mb-3">
+                <ChevronLeft size={16}/> Back to Events
+              </button>
+              <div className="glass rounded-xl p-4 mb-3">
+                <h3 className="text-white font-semibold flex items-center gap-2"><CalendarDays size={16} className="text-orange-400"/> {selectedEvent.name}</h3>
+                {selectedEvent.description && <p className="text-gray-400 text-sm mt-1">{selectedEvent.description}</p>}
               </div>
-              <div className="text-left">
-                <span className="font-semibold block">Server Application</span>
-                <span className="text-gray-500 text-xs">Submit or check your whitelist application</span>
-              </div>
-            </span>
-            <ChevronRight size={18} className={`text-gray-400 transition-transform duration-200 ${showApplication ? 'rotate-90' : ''}`}/>
-          </button>
-          {showApplication && (
-            <div className="mt-3 animate-fade-in">
-              <ApplicationForm user={user} addToast={addToast} setPage={setPage}/>
+              <ApplicationForm user={user} addToast={addToast} setPage={setPage} event={selectedEvent}/>
+            </div>
+          ) : events.length > 0 ? (
+            <div className="grid gap-3 animate-fade-in">
+              {events.map(ev => (
+                <button key={ev.id} onClick={() => setSelectedEvent(ev)}
+                  className="w-full flex items-center justify-between px-5 py-4 glass glass-hover rounded-xl text-white transition-all group text-left">
+                  <span className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center text-orange-400">
+                      <Calendar size={20}/>
+                    </div>
+                    <div>
+                      <span className="font-semibold block">{ev.name}</span>
+                      {ev.description && <span className="text-gray-500 text-xs">{ev.description}</span>}
+                    </div>
+                  </span>
+                  <ChevronRight size={18} className="text-gray-400 group-hover:text-orange-400 transition-colors"/>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="glass rounded-2xl p-8 text-center animate-fade-in">
+              <CalendarDays size={32} className="mx-auto mb-3 text-gray-600"/>
+              <p className="text-gray-400 font-medium">No events available at the moment.</p>
+              <p className="text-gray-600 text-sm mt-1">Check back later for new events and applications.</p>
             </div>
           )}
         </div>
@@ -1612,6 +1654,13 @@ function AdminPanel({ addToast }) {
   const [removeTarget, setRemoveTarget] = useState(null);
   const [removeReason, setRemoveReason] = useState('');
 
+  // Event management state
+  const [events, setEvents] = useState([]);
+  const [eventsOpen, setEventsOpen] = useState(false);
+  const [newEventName, setNewEventName] = useState('');
+  const [newEventDescription, setNewEventDescription] = useState('');
+  const [eventFilter, setEventFilter] = useState('all');
+
   // Load site settings
   useEffect(() => {
     (async () => {
@@ -1634,6 +1683,58 @@ function AdminPanel({ addToast }) {
     }, () => setLoading(false));
     return unsub;
   }, []);
+
+  // Load events
+  useEffect(() => {
+    (async () => {
+      try {
+        const q = query(collection(db, 'events'), orderBy('createdAt', 'asc'));
+        const snap = await getDocs(q);
+        setEvents(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      } catch (err) {
+        console.error('Failed to load events:', err);
+      }
+    })();
+  }, []);
+
+  const handleAddEvent = async () => {
+    if (!newEventName.trim()) { addToast('Event name is required.', 'error'); return; }
+    try {
+      const eventId = genId();
+      const eventData = {
+        id: eventId,
+        name: newEventName.trim(),
+        description: newEventDescription.trim(),
+        active: true,
+        createdAt: serverTimestamp(),
+      };
+      await setDoc(doc(db, 'events', eventId), eventData);
+      // Refetch from Firestore to get the server timestamp
+      const snap = await getDoc(doc(db, 'events', eventId));
+      if (snap.exists()) {
+        setEvents(prev => [...prev, { id: snap.id, ...snap.data() }]);
+      }
+      setNewEventName('');
+      setNewEventDescription('');
+      addToast('Event created!', 'success');
+    } catch { addToast('Failed to create event.', 'error'); }
+  };
+
+  const handleToggleEvent = async (ev) => {
+    try {
+      await updateDoc(doc(db, 'events', ev.id), { active: !ev.active });
+      setEvents(prev => prev.map(e => e.id === ev.id ? { ...e, active: !e.active } : e));
+      addToast(`Event ${ev.active ? 'deactivated' : 'activated'}.`, 'success');
+    } catch { addToast('Failed to update event.', 'error'); }
+  };
+
+  const handleDeleteEvent = async (ev) => {
+    try {
+      await deleteDoc(doc(db, 'events', ev.id));
+      setEvents(prev => prev.filter(e => e.id !== ev.id));
+      addToast('Event deleted.', 'success');
+    } catch { addToast('Failed to delete event.', 'error'); }
+  };
 
   // Helper to create notification for a user
   const createNotification = async (userId, message, type) => {
@@ -1775,10 +1876,10 @@ function AdminPanel({ addToast }) {
       addToast('No applications to export.', 'error');
       return;
     }
-    const headers = ['Gamertag', 'Email', 'Discord', 'Age', 'Gender', 'Status', 'Social Media', 'RP Interest', 'Submitted'];
+    const headers = ['Gamertag', 'Email', 'Discord', 'Age', 'Gender', 'Status', 'Social Media', 'RP Interest', 'Event', 'Submitted'];
     const rows = apps.map(a => [
       a.gamertag, a.email, a.discordId, a.age, a.gender, a.status,
-      a.socialMedia || '', a.rpInterest, formatTimestamp(a.submittedAt),
+      a.socialMedia || '', a.rpInterest, a.eventName || '', formatTimestamp(a.submittedAt),
     ]);
     const csv = [
       headers.join(','),
@@ -1795,6 +1896,8 @@ function AdminPanel({ addToast }) {
     addToast('CSV exported!', 'success');
   };
 
+  const eventNames = useMemo(() => [...new Set(apps.map(a => a.eventName).filter(Boolean))], [apps]);
+
   const filteredApps = apps
     .filter(a => {
       const matchesTab = tab === 'all' ? true :
@@ -1805,7 +1908,8 @@ function AdminPanel({ addToast }) {
         a.gamertag?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         a.discordId?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         a.email?.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesTab && matchesSearch;
+      const matchesEvent = eventFilter === 'all' || (a.eventName || '') === eventFilter;
+      return matchesTab && matchesSearch && matchesEvent;
     })
     .sort((a, b) => {
       const getTime = (ts) => {
@@ -1961,6 +2065,61 @@ function AdminPanel({ addToast }) {
           )}
         </div>
 
+        {/* ─── Event Management (collapsible) ─── */}
+        <div className="mb-6">
+          <button onClick={() => setEventsOpen(!eventsOpen)}
+            className="w-full flex items-center justify-between px-5 py-3 glass rounded-xl text-white hover:bg-white/5 transition-all">
+            <span className="flex items-center gap-2 font-semibold">
+              <CalendarDays size={18} className="text-orange-400"/> Event Management
+            </span>
+            <ChevronRight size={18} className={`text-gray-400 transition-transform duration-200 ${eventsOpen ? 'rotate-90' : ''}`}/>
+          </button>
+          {eventsOpen && (
+            <div className="mt-3 glass rounded-xl p-5 space-y-4 animate-fade-in">
+              <div className="space-y-3">
+                <input type="text" value={newEventName} onChange={e => setNewEventName(e.target.value)}
+                  placeholder="Event name *"
+                  className="w-full px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/50 transition text-sm"/>
+                <textarea value={newEventDescription} onChange={e => setNewEventDescription(e.target.value)}
+                  placeholder="Event description (optional)"
+                  rows={2}
+                  className="w-full px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/50 transition text-sm resize-none"/>
+                <button onClick={handleAddEvent}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-orange-600 hover:bg-orange-500 text-white text-sm font-medium transition-all animate-btn-press">
+                  <Plus size={16}/> Add Event
+                </button>
+              </div>
+
+              {events.length > 0 ? (
+                <div className="space-y-2">
+                  {events.map(ev => (
+                    <div key={ev.id} className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/10">
+                      <div className="flex-1 min-w-0">
+                        <span className="text-white text-sm font-medium">{ev.name}</span>
+                        {ev.description && <p className="text-gray-500 text-xs truncate">{ev.description}</p>}
+                      </div>
+                      <div className="flex items-center gap-2 ml-3 flex-shrink-0">
+                        <button onClick={() => handleToggleEvent(ev)}
+                          className={`p-1.5 rounded-lg transition-all ${ev.active ? 'text-emerald-400 hover:bg-emerald-500/20' : 'text-gray-600 hover:bg-white/10'}`}
+                          title={ev.active ? 'Deactivate' : 'Activate'}>
+                          {ev.active ? <ToggleRight size={20}/> : <ToggleLeft size={20}/>}
+                        </button>
+                        <button onClick={() => handleDeleteEvent(ev)}
+                          className="p-1.5 rounded-lg text-red-400 hover:bg-red-500/20 transition-all"
+                          title="Delete event">
+                          <Trash2 size={16}/>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-600 text-sm text-center py-2">No events created yet.</p>
+              )}
+            </div>
+          )}
+        </div>
+
         {loading ? (
           <div className="animate-fade-in space-y-6">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -2028,6 +2187,15 @@ function AdminPanel({ addToast }) {
             className="flex items-center gap-1.5 px-3 py-1.5 glass rounded-lg text-sm text-gray-400 hover:text-white transition-all">
             <ArrowUpDown size={14}/> {sortOrder === 'newest' ? 'Newest' : 'Oldest'}
           </button>
+          {eventNames.length > 0 && (
+            <select value={eventFilter} onChange={e => setEventFilter(e.target.value)}
+              className="px-3 py-1.5 glass rounded-lg text-sm text-gray-400 bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-orange-500/50 transition cursor-pointer">
+              <option value="all" className="bg-gray-900">All Events</option>
+              {eventNames.map(name => (
+                <option key={name} value={name} className="bg-gray-900">{name}</option>
+              ))}
+            </select>
+          )}
         </div>
 
         {/* Application cards */}
@@ -2079,6 +2247,7 @@ function AdminPanel({ addToast }) {
                       <span className="text-gray-500">Email: <span className="text-gray-300">{app.email}</span></span>
                       <span className="text-gray-500">RP Interest: <span className="text-gray-300">{app.rpInterest}</span></span>
                       {app.socialMedia && <span className="text-gray-500">Social: <span className="text-gray-300">{app.socialMedia}</span></span>}
+                      {app.eventName && <span className="text-gray-500">Event: <span className="text-orange-300">{app.eventName}</span></span>}
                     </div>
                     {app.rpExplanation && (
                       <p className="text-sm text-gray-400 mb-2"><span className="text-gray-500">RP Note:</span> {app.rpExplanation}</p>
