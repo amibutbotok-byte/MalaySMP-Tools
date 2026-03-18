@@ -20,7 +20,7 @@ import {
   collection, doc, setDoc, getDoc, getDocs,
   updateDoc, deleteDoc, query, where, orderBy, onSnapshot, writeBatch,
   serverTimestamp,
-  storageRef, uploadBytes, getDownloadURL,
+  storageRef, uploadBytes, getDownloadURL, deleteObject,
 } from './firebase.js';
 
 // ─── Constants ───
@@ -201,15 +201,20 @@ function Navbar({ page, setPage, user, onLogout, notifications, onMarkNotifRead 
   const navItems = user ? (
     isAdmin ? [
       { label: 'Dashboard', icon: <Settings size={16}/>, page: 'admin' },
+      { label: 'Events', icon: <CalendarDays size={16}/>, page: 'events' },
       { label: 'Members', icon: <Users size={16}/>, page: 'members' },
+      { label: 'Server', icon: <Globe size={16}/>, page: 'server' },
     ] : [
       { label: 'Home', icon: <Home size={16}/>, page: 'landing' },
       { label: 'Dashboard', icon: <LayoutDashboard size={16}/>, page: 'dashboard' },
+      { label: 'Events', icon: <CalendarDays size={16}/>, page: 'events' },
       { label: 'Members', icon: <Users size={16}/>, page: 'members' },
+      { label: 'Server', icon: <Globe size={16}/>, page: 'server' },
       { label: 'Profile', icon: <User size={16}/>, page: 'profile' },
     ]
   ) : [
     { label: 'Home', icon: <Home size={16}/>, page: 'landing' },
+    { label: 'Events', icon: <CalendarDays size={16}/>, page: 'events' },
     { label: 'Members', icon: <Users size={16}/>, page: 'members' },
     { label: 'Login', icon: <LogIn size={16}/>, page: 'login' },
   ];
@@ -650,7 +655,11 @@ function ApplicationForm({ user, addToast, setPage, editData, onResubmit, event 
     }
     (async () => {
       try {
-        const q = query(collection(db, 'applications'), where('userId', '==', user.id));
+        const filters = [where('userId', '==', user.id)];
+        if (event?.id) {
+          filters.push(where('eventId', '==', event.id));
+        }
+        const q = query(collection(db, 'applications'), ...filters);
         const snap = await getDocs(q);
         if (!snap.empty) {
           setSubmitted(true);
@@ -660,7 +669,7 @@ function ApplicationForm({ user, addToast, setPage, editData, onResubmit, event 
       }
       setLoading(false);
     })();
-  }, [user.id, editData]);
+  }, [user.id, editData, event?.id]);
 
   const handleRulesScroll = () => {
     if (!rulesRef.current) return;
@@ -742,7 +751,8 @@ function ApplicationForm({ user, addToast, setPage, editData, onResubmit, event 
         setSubmitted(true);
         addToast('Your application has been submitted!', 'success');
       }
-    } catch {
+    } catch (err) {
+      console.error('Failed to submit application:', err);
       addToast('Failed to submit application. Please try again.', 'error');
     }
   };
@@ -1248,7 +1258,7 @@ function Dashboard({ user, addToast, setPage }) {
                 {selectedEvent.description && <p className="text-gray-400 text-sm mt-1">{selectedEvent.description}</p>}
               </div>
               {statusInfo.canJoin ? (
-                <ApplicationForm user={user} addToast={addToast} setPage={setPage} event={selectedEvent}/>
+                <ApplicationForm key={selectedEvent.id} user={user} addToast={addToast} setPage={setPage} event={selectedEvent}/>
               ) : (
                 <div className="glass rounded-2xl p-8 text-center">
                   <StatusIcon size={32} className="mx-auto mb-3 text-gray-500"/>
@@ -1345,6 +1355,8 @@ function StatusPage({ user, setPage, addToast }) {
               rpInterest: myApp.rpInterest || '',
               rpExplanation: myApp.rpExplanation || '',
               additionalMessage: myApp.additionalMessage || '',
+              eventId: myApp.eventId || '',
+              eventName: myApp.eventName || '',
             }}
             onResubmit={() => setEditing(false)}
           />
@@ -1781,6 +1793,40 @@ function AdminPanel({ addToast }) {
     } catch { addToast('Failed to delete event.', 'error'); }
   };
 
+  const handleEventScreenshotUpload = async (ev, file) => {
+    const current = ev.screenshots || [];
+    if (current.length >= 3) {
+      addToast('Maximum 3 screenshots per event.', 'error');
+      return;
+    }
+    try {
+      const idx = current.length;
+      const ref = storageRef(storage, `events/${ev.id}/screenshot_${idx}_${Date.now()}`);
+      await uploadBytes(ref, file);
+      const url = await getDownloadURL(ref);
+      await updateDoc(doc(db, 'events', ev.id), {
+        screenshots: [...current, url],
+      });
+      addToast('Screenshot uploaded!', 'success');
+    } catch {
+      addToast('Failed to upload screenshot.', 'error');
+    }
+  };
+
+  const handleEventScreenshotDelete = async (ev, urlToDelete, idx) => {
+    try {
+      try {
+        const ref = storageRef(storage, urlToDelete);
+        await deleteObject(ref);
+      } catch (storageErr) { console.warn('Storage delete skipped:', storageErr.code || storageErr.message); }
+      const updated = (ev.screenshots || []).filter((_, i) => i !== idx);
+      await updateDoc(doc(db, 'events', ev.id), { screenshots: updated });
+      addToast('Screenshot removed.', 'success');
+    } catch {
+      addToast('Failed to remove screenshot.', 'error');
+    }
+  };
+
   // Helper to create notification for a user
   const createNotification = async (userId, message, type) => {
     try {
@@ -2172,6 +2218,35 @@ function AdminPanel({ addToast }) {
                           ))}
                         </select>
                       </div>
+                      {/* Screenshots */}
+                      <div className="pt-2 border-t border-white/5">
+                        <p className="text-gray-400 text-xs font-medium mb-2 flex items-center gap-1.5">
+                          <Image size={12}/> Screenshots ({(ev.screenshots || []).length}/3)
+                        </p>
+                        {(ev.screenshots || []).length > 0 && (
+                          <div className="grid grid-cols-3 gap-2 mb-2">
+                            {ev.screenshots.map((url, sIdx) => (
+                              <div key={sIdx} className="relative group">
+                                <img src={url} alt={`Screenshot ${sIdx + 1}`}
+                                  className="w-full h-16 object-cover rounded-lg border border-white/10"/>
+                                <button
+                                  onClick={() => handleEventScreenshotDelete(ev, url, sIdx)}
+                                  className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-600 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                  title="Remove screenshot">
+                                  <X size={10}/>
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {(ev.screenshots || []).length < 3 && (
+                          <label className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-dashed border-white/10 hover:border-orange-500/30 text-gray-400 hover:text-orange-400 text-xs cursor-pointer transition-all w-fit">
+                            <Upload size={12}/> Upload Screenshot
+                            <input type="file" accept="image/*" className="hidden"
+                              onChange={e => { if (e.target.files[0]) { handleEventScreenshotUpload(ev, e.target.files[0]); e.target.value = ''; } }}/>
+                          </label>
+                        )}
+                      </div>
                     </div>
                     );
                   })}
@@ -2273,9 +2348,29 @@ function AdminPanel({ addToast }) {
               <div key={app.id} className="glass glass-hover rounded-xl p-5 transition-all">
                 <div className="flex flex-col md:flex-row md:items-start gap-4">
                   {/* Skin preview */}
-                  <div className="flex-shrink-0">
+                  <div className="flex-shrink-0 group/skin relative">
                     {app.skinPreview ? (
-                      <img src={app.skinPreview} alt="Skin" className="w-16 h-16 rounded-lg border border-white/10 pixel-art"/>
+                      <>
+                        <img src={app.skinPreview} alt="Skin" className="w-16 h-16 rounded-lg border border-white/10 pixel-art"/>
+                        <button onClick={() => {
+                          const link = document.createElement('a');
+                          link.download = `${app.gamertag || 'skin'}.png`;
+                          if (app.skinPreview.startsWith('data:')) {
+                            link.href = app.skinPreview;
+                            link.click();
+                          } else {
+                            fetch(app.skinPreview).then(r => r.blob()).then(blob => {
+                              link.href = URL.createObjectURL(blob);
+                              link.click();
+                              URL.revokeObjectURL(link.href);
+                            }).catch(() => window.open(app.skinPreview, '_blank'));
+                          }
+                        }}
+                          className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg opacity-0 group-hover/skin:opacity-100 transition-opacity cursor-pointer"
+                          title="Download skin">
+                          <Download size={18} className="text-white"/>
+                        </button>
+                      </>
                     ) : (
                       <div className="w-16 h-16 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-gray-600">
                         <Gamepad2 size={24}/>
@@ -2432,6 +2527,316 @@ function AdminPanel({ addToast }) {
   );
 }
 
+// ─── Server Page (Authenticated) ───
+function ServerPage({ user, setPage }) {
+  return (
+    <div className="min-h-screen pt-24 pb-12 px-4 max-w-3xl mx-auto">
+      <div className="animate-fade-in">
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 rounded-2xl bg-orange-500/20 flex items-center justify-center mx-auto mb-4">
+            <Globe size={32} className="text-orange-400"/>
+          </div>
+          <h1 className="text-3xl font-bold text-white mb-2">Server Access</h1>
+          <p className="text-gray-500">Join our Discord community to get the server details.</p>
+        </div>
+
+        {/* Discord Requirement Card */}
+        <div className="glass rounded-2xl overflow-hidden mb-6">
+          <div className="bg-[#5865F2]/10 border-b border-[#5865F2]/20 px-6 py-4 flex items-center gap-3">
+            <MessageCircle size={22} className="text-[#5865F2]"/>
+            <h2 className="text-lg font-semibold text-white">Discord Required</h2>
+          </div>
+          <div className="p-6 space-y-5">
+            <p className="text-gray-300 leading-relaxed">
+              To access the <span className="text-orange-400 font-medium">MalaySMP</span> server, you must join our official Discord server.
+              All server information — including the <span className="text-white font-medium">IP address</span>, <span className="text-white font-medium">port</span>,
+              and <span className="text-white font-medium">latest news</span> — is shared exclusively on Discord.
+            </p>
+
+            {/* Steps */}
+            <div className="space-y-3">
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-white/5">
+                <div className="w-7 h-7 rounded-full bg-orange-500/20 text-orange-400 flex items-center justify-center flex-shrink-0 text-sm font-bold">1</div>
+                <div>
+                  <p className="text-white font-medium text-sm">Download Discord</p>
+                  <p className="text-gray-500 text-xs mt-0.5">If you don&apos;t have Discord yet, download it for free from the official website.</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-white/5">
+                <div className="w-7 h-7 rounded-full bg-orange-500/20 text-orange-400 flex items-center justify-center flex-shrink-0 text-sm font-bold">2</div>
+                <div>
+                  <p className="text-white font-medium text-sm">Join MalaySMP Discord</p>
+                  <p className="text-gray-500 text-xs mt-0.5">Click the button below to join our server and get access to all channels.</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-white/5">
+                <div className="w-7 h-7 rounded-full bg-orange-500/20 text-orange-400 flex items-center justify-center flex-shrink-0 text-sm font-bold">3</div>
+                <div>
+                  <p className="text-white font-medium text-sm">Get Whitelisted</p>
+                  <p className="text-gray-500 text-xs mt-0.5">Complete the application process and wait for admin approval. Once accepted, you&apos;ll find the server IP and connection details in Discord.</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <a href={SOCIAL_LINKS.discord} target="_blank" rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[#5865F2] hover:bg-[#4752C4] text-white font-semibold transition-all animate-btn-press text-sm">
+                <MessageCircle size={18}/> Join Discord Server
+              </a>
+              <a href="https://discord.com/download" target="_blank" rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-gray-300 font-medium transition-all text-sm">
+                <Download size={18}/> Download Discord App
+              </a>
+            </div>
+          </div>
+        </div>
+
+        {/* Info Cards */}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="glass rounded-xl p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <Shield size={18} className="text-orange-400"/>
+              <h3 className="text-white font-semibold text-sm">Whitelisted Server</h3>
+            </div>
+            <p className="text-gray-400 text-sm leading-relaxed">
+              MalaySMP is a whitelisted server. Only approved members can join. Submit your application
+              through the Dashboard and wait for admin approval.
+            </p>
+          </div>
+          <div className="glass rounded-xl p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <Bell size={18} className="text-orange-400"/>
+              <h3 className="text-white font-semibold text-sm">Server News &amp; Updates</h3>
+            </div>
+            <p className="text-gray-400 text-sm leading-relaxed">
+              Stay up to date with the latest server news, events, maintenance schedules,
+              and announcements — all posted in our Discord server.
+            </p>
+          </div>
+        </div>
+
+        {/* Quick Links */}
+        {user && (
+          <div className="mt-6 glass rounded-xl p-5">
+            <h3 className="text-white font-semibold text-sm mb-3 flex items-center gap-2">
+              <Link2 size={16} className="text-orange-400"/> Quick Links
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              <button onClick={() => setPage('dashboard')}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 text-xs transition-all">
+                <LayoutDashboard size={14}/> Go to Dashboard
+              </button>
+              <button onClick={() => setPage('events')}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 text-xs transition-all">
+                <CalendarDays size={14}/> View Events
+              </button>
+              <button onClick={() => setPage('members')}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 text-xs transition-all">
+                <Users size={14}/> View Members
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Event List Page (Public) ───
+function EventListPage({ setPage }) {
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [lightboxImg, setLightboxImg] = useState(null);
+
+  useEffect(() => {
+    const q = query(collection(db, 'events'), orderBy('createdAt', 'desc'));
+    const unsub = onSnapshot(q, (snap) => {
+      const allEvents = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      // Show all events except cancelled
+      setEvents(allEvents.filter(ev => {
+        const status = getEventStatus(ev);
+        return status !== 'cancelled';
+      }));
+      setLoading(false);
+    }, () => setLoading(false));
+    return unsub;
+  }, []);
+
+  const formatDate = (ts) => {
+    if (!ts) return null;
+    try {
+      const d = ts.toDate ? ts.toDate() : new Date(ts);
+      return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+    } catch { return null; }
+  };
+
+  // Detail view for a single event
+  if (selectedEvent) {
+    const evStatus = getEventStatus(selectedEvent);
+    const statusInfo = EVENT_STATUSES[evStatus] || EVENT_STATUSES.open;
+    const StatusIcon = statusInfo.icon;
+    const screenshots = selectedEvent.screenshots || [];
+
+    return (
+      <div className="min-h-screen pt-24 pb-12 px-4 max-w-4xl mx-auto">
+        <div className="animate-fade-in">
+          <button onClick={() => setSelectedEvent(null)}
+            className="flex items-center gap-1.5 text-gray-400 hover:text-white mb-6 text-sm transition-colors">
+            <ChevronRight size={16} className="rotate-180"/> Back to Events
+          </button>
+
+          <div className="glass rounded-2xl overflow-hidden">
+            {/* Header */}
+            <div className="p-6 md:p-8 border-b border-white/5">
+              <div className="flex items-start justify-between gap-4 flex-wrap">
+                <div className="flex-1 min-w-0">
+                  <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">{selectedEvent.name}</h1>
+                  {formatDate(selectedEvent.createdAt) && (
+                    <p className="text-gray-500 text-sm flex items-center gap-1.5">
+                      <Calendar size={14}/> {formatDate(selectedEvent.createdAt)}
+                    </p>
+                  )}
+                </div>
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold ${statusInfo.color} flex-shrink-0`}>
+                  <StatusIcon size={14}/> {evStatus === 'ended' ? 'ENDED' : statusInfo.label}
+                </span>
+              </div>
+            </div>
+
+            {/* Description */}
+            <div className="p-6 md:p-8">
+              {selectedEvent.description ? (
+                <p className="text-gray-300 leading-relaxed whitespace-pre-wrap">{selectedEvent.description}</p>
+              ) : (
+                <p className="text-gray-600 italic">No description provided.</p>
+              )}
+            </div>
+
+            {/* Screenshots */}
+            {screenshots.length > 0 && (
+              <div className="px-6 md:px-8 pb-6 md:pb-8">
+                <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                  <Image size={14} className="text-orange-400"/> Screenshots
+                </h3>
+                <div className={`grid gap-3 ${screenshots.length === 1 ? 'grid-cols-1' : screenshots.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+                  {screenshots.map((url, idx) => (
+                    <button key={idx} onClick={() => setLightboxImg(url)}
+                      className="group relative overflow-hidden rounded-xl border border-white/10 hover:border-orange-500/40 transition-all duration-300">
+                      <img src={url} alt={`Screenshot ${idx + 1}`}
+                        className="w-full h-40 md:h-56 object-cover transition-transform duration-300 group-hover:scale-105"/>
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                        <Eye size={24} className="text-white opacity-0 group-hover:opacity-80 transition-opacity"/>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Lightbox */}
+        {lightboxImg && (
+          <div className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={() => setLightboxImg(null)}>
+            <button className="absolute top-4 right-4 text-white/60 hover:text-white transition-colors" onClick={() => setLightboxImg(null)}>
+              <X size={28}/>
+            </button>
+            <img src={lightboxImg} alt="Screenshot" className="max-w-full max-h-[90vh] object-contain rounded-xl shadow-2xl"
+              onClick={e => e.stopPropagation()}/>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen pt-24 pb-12 px-4 max-w-4xl mx-auto">
+      <div className="animate-fade-in">
+        {setPage && (
+          <button onClick={() => setPage('landing')}
+            className="flex items-center gap-1.5 text-gray-400 hover:text-white mb-4 text-sm transition-colors">
+            <ChevronRight size={16} className="rotate-180"/> Back
+          </button>
+        )}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-white mb-2 flex items-center justify-center gap-3">
+            <CalendarDays size={28} className="text-orange-400"/> Event List
+          </h1>
+          <p className="text-gray-500">Browse all server events and their details.</p>
+        </div>
+
+        {loading ? (
+          <div className="space-y-4">
+            {[1,2,3].map(i => (
+              <div key={i} className="glass rounded-xl p-5 space-y-3">
+                <div className="flex justify-between">
+                  <Skeleton className="h-6 w-48"/>
+                  <Skeleton className="h-6 w-20 rounded-full"/>
+                </div>
+                <Skeleton className="h-4 w-full"/>
+                <Skeleton className="h-4 w-3/4"/>
+              </div>
+            ))}
+          </div>
+        ) : events.length === 0 ? (
+          <div className="glass rounded-2xl p-12 text-center">
+            <CalendarDays size={32} className="mx-auto mb-3 text-gray-600"/>
+            <p className="text-gray-500 font-medium">No events available.</p>
+            <p className="text-gray-600 text-sm mt-1">Check back later for new events.</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {events.map(ev => {
+              const evStatus = getEventStatus(ev);
+              const statusInfo = EVENT_STATUSES[evStatus] || EVENT_STATUSES.open;
+              const StatusIcon = statusInfo.icon;
+              const screenshots = ev.screenshots || [];
+              return (
+                <button key={ev.id}
+                  onClick={() => setSelectedEvent(ev)}
+                  className="w-full text-left glass glass-hover rounded-xl p-5 transition-all group">
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center text-orange-400 flex-shrink-0">
+                        <Calendar size={20}/>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-white font-semibold text-base truncate">{ev.name}</h3>
+                        {formatDate(ev.createdAt) && (
+                          <p className="text-gray-600 text-xs">{formatDate(ev.createdAt)}</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 flex-shrink-0">
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${statusInfo.color}`}>
+                        <StatusIcon size={12}/> {evStatus === 'ended' ? 'ENDED' : statusInfo.label}
+                      </span>
+                      <ChevronRight size={18} className="text-gray-600 group-hover:text-orange-400 transition-colors"/>
+                    </div>
+                  </div>
+                  {ev.description && (
+                    <p className="text-gray-400 text-sm line-clamp-2 ml-[52px]">{ev.description}</p>
+                  )}
+                  {screenshots.length > 0 && (
+                    <div className="flex gap-2 mt-3 ml-[52px]">
+                      {screenshots.slice(0, 3).map((url, idx) => (
+                        <img key={idx} src={url} alt="" className="w-16 h-10 object-cover rounded-lg border border-white/10 opacity-70 group-hover:opacity-100 transition-opacity"/>
+                      ))}
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Skin Viewer Component ───
 function SkinViewer3D({ skinUrl, width = 150, height = 300 }) {
   const canvasRef = useRef(null);
@@ -2474,7 +2879,7 @@ function SkinViewer3D({ skinUrl, width = 150, height = 300 }) {
 }
 
 // ─── Members Page (Public) ───
-function MembersPage() {
+function MembersPage({ setPage }) {
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -2517,6 +2922,12 @@ function MembersPage() {
   return (
     <div className="min-h-screen pt-24 pb-12 px-4 max-w-7xl mx-auto">
       <div className="animate-fade-in">
+        {setPage && (
+          <button onClick={() => setPage('dashboard')}
+            className="flex items-center gap-1.5 text-gray-400 hover:text-white mb-4 text-sm transition-colors">
+            <ChevronRight size={16} className="rotate-180"/> Back
+          </button>
+        )}
         <div className="text-center mb-10">
           <h1 className="text-3xl font-bold text-white mb-2 flex items-center justify-center gap-3">
             <Users size={28} className="text-orange-400"/> Server Members
@@ -2757,7 +3168,9 @@ export default function App() {
     switch (page) {
       case 'landing': return <LandingPage setPage={navigate} siteSettings={siteSettings} user={user}/>;
       case 'login': return user ? <Dashboard user={user} addToast={addToast} setPage={navigate}/> : <AuthPage addToast={addToast}/>;
-      case 'members': return <MembersPage/>;
+      case 'members': return <MembersPage setPage={navigate}/>;
+      case 'events': return <EventListPage setPage={navigate}/>;
+      case 'server': return <ServerPage user={user} setPage={navigate}/>;
       case 'setup-gamertag': return user ? <GamertagSetup user={user} onComplete={handleGamertagComplete} addToast={addToast}/> : <LandingPage setPage={navigate} siteSettings={siteSettings} user={user}/>;
       case 'dashboard': return user ? <Dashboard user={user} addToast={addToast} setPage={navigate}/> : <LandingPage setPage={navigate} siteSettings={siteSettings} user={user}/>;
       case 'status': return user ? <StatusPage user={user} setPage={navigate} addToast={addToast}/> : <LandingPage setPage={navigate} siteSettings={siteSettings} user={user}/>;

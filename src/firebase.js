@@ -29,6 +29,7 @@ import {
   ref as storageRef,
   uploadBytes,
   getDownloadURL,
+  deleteObject,
 } from 'firebase/storage';
 
 // ─── Firebase Configuration ───
@@ -80,4 +81,5 @@ export {
   storageRef,
   uploadBytes,
   getDownloadURL,
+  deleteObject,
 };
