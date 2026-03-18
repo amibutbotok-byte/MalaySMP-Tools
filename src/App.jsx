@@ -1813,8 +1813,9 @@ function AdminPanel({ addToast }) {
     } catch (err) {
       console.error('Screenshot upload failed:', err);
       addToast('Failed to upload screenshot.', 'error');
+    } finally {
+      setScreenshotUploading(null);
     }
-    setScreenshotUploading(null);
   };
 
   const handleEventScreenshotDelete = async (ev, urlToDelete, idx) => {
@@ -1925,8 +1926,9 @@ function AdminPanel({ addToast }) {
       addToast('Site settings saved!', 'success');
     } catch {
       addToast('Failed to save site settings.', 'error');
+    } finally {
+      setSettingsSaving(false);
     }
-    setSettingsSaving(false);
   };
 
   const handleBgUpload = async (e) => {
@@ -1941,8 +1943,9 @@ function AdminPanel({ addToast }) {
       addToast('Background image uploaded!', 'success');
     } catch {
       addToast('Failed to upload background image.', 'error');
+    } finally {
+      setBgUploading(false);
     }
-    setBgUploading(false);
   };
 
   // Reset all applications
