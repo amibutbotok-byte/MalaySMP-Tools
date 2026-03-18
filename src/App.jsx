@@ -92,6 +92,7 @@ const APP_STEPS = [
 
 // ─── Helpers ───
 function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+function getEventStatus(ev) { return ev.status || (ev.active ? 'open' : 'ended'); }
 
 // ─── Skeleton Loading ───
 function Skeleton({ className = '' }) {
@@ -1168,7 +1169,7 @@ function Dashboard({ user, addToast, setPage }) {
       const allEvents = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       // Show events that have a visible status (or legacy active events)
       setEvents(allEvents.filter(ev => {
-        const status = ev.status || (ev.active ? 'open' : 'ended');
+        const status = getEventStatus(ev);
         return status !== 'ended' && status !== 'cancelled';
       }));
     }, (err) => {
@@ -1228,7 +1229,7 @@ function Dashboard({ user, addToast, setPage }) {
           </h2>
 
           {selectedEvent ? (() => {
-            const evStatus = selectedEvent.status || (selectedEvent.active ? 'open' : 'ended');
+            const evStatus = getEventStatus(selectedEvent);
             const statusInfo = EVENT_STATUSES[evStatus] || EVENT_STATUSES.open;
             const StatusIcon = statusInfo.icon;
             return (
@@ -1259,7 +1260,7 @@ function Dashboard({ user, addToast, setPage }) {
           })() : events.length > 0 ? (
             <div className="grid gap-3 animate-fade-in">
               {events.map(ev => {
-                const evStatus = ev.status || (ev.active ? 'open' : 'ended');
+                const evStatus = getEventStatus(ev);
                 const statusInfo = EVENT_STATUSES[evStatus] || EVENT_STATUSES.open;
                 const StatusIcon = statusInfo.icon;
                 return (
@@ -1762,10 +1763,10 @@ function AdminPanel({ addToast }) {
         id: logId,
         eventId: ev.id,
         eventName: ev.name,
-        previousStatus: ev.status || (ev.active ? 'open' : 'ended'),
+        previousStatus: getEventStatus(ev),
         newStatus,
         note: note || '',
-        changedBy: ADMIN_EMAIL,
+        changedBy: auth.currentUser?.email || ADMIN_EMAIL,
         changedAt: serverTimestamp(),
       });
       const statusLabel = EVENT_STATUSES[newStatus]?.label || newStatus;
@@ -2137,7 +2138,7 @@ function AdminPanel({ addToast }) {
               {events.length > 0 ? (
                 <div className="space-y-2">
                   {events.map(ev => {
-                    const evStatus = ev.status || (ev.active ? 'open' : 'ended');
+                    const evStatus = getEventStatus(ev);
                     const statusInfo = EVENT_STATUSES[evStatus] || EVENT_STATUSES.open;
                     const StatusIcon = statusInfo.icon;
                     return (
