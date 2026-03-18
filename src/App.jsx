@@ -1713,6 +1713,7 @@ function AdminPanel({ addToast }) {
   const [newEventName, setNewEventName] = useState('');
   const [newEventDescription, setNewEventDescription] = useState('');
   const [eventFilter, setEventFilter] = useState('all');
+  const [screenshotUploading, setScreenshotUploading] = useState(null);
 
   // Load site settings
   useEffect(() => {
@@ -1799,6 +1800,7 @@ function AdminPanel({ addToast }) {
       addToast('Maximum 3 screenshots per event.', 'error');
       return;
     }
+    setScreenshotUploading(ev.id);
     try {
       const idx = current.length;
       const ref = storageRef(storage, `events/${ev.id}/screenshot_${idx}_${Date.now()}`);
@@ -1808,9 +1810,11 @@ function AdminPanel({ addToast }) {
         screenshots: [...current, url],
       });
       addToast('Screenshot uploaded!', 'success');
-    } catch {
+    } catch (err) {
+      console.error('Screenshot upload failed:', err);
       addToast('Failed to upload screenshot.', 'error');
     }
+    setScreenshotUploading(null);
   };
 
   const handleEventScreenshotDelete = async (ev, urlToDelete, idx) => {
@@ -2240,11 +2244,18 @@ function AdminPanel({ addToast }) {
                           </div>
                         )}
                         {(ev.screenshots || []).length < 3 && (
+                          screenshotUploading === ev.id ? (
+                            <div className="flex items-center gap-1.5 px-3 py-1.5 text-orange-400 text-xs">
+                              <div className="w-3 h-3 border-2 border-orange-400/30 border-t-orange-400 rounded-full animate-spin"/>
+                              Uploading…
+                            </div>
+                          ) : (
                           <label className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-dashed border-white/10 hover:border-orange-500/30 text-gray-400 hover:text-orange-400 text-xs cursor-pointer transition-all w-fit">
                             <Upload size={12}/> Upload Screenshot
                             <input type="file" accept="image/*" className="hidden"
                               onChange={e => { if (e.target.files[0]) { handleEventScreenshotUpload(ev, e.target.files[0]); e.target.value = ''; } }}/>
                           </label>
+                          )
                         )}
                       </div>
                     </div>
