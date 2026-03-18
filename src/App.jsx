@@ -6,7 +6,8 @@ import {
   Home, FileText, Settings, CheckCircle, AlertCircle, Sparkles,
   RefreshCw, Trash2, Download, Palette, Image, User, Megaphone, Type,
   ArrowUpDown, Edit, LayoutDashboard, Link2, BookOpen, SkipForward, UserX,
-  Calendar, Plus, CalendarDays, ToggleLeft, ToggleRight,
+  Calendar, Plus, CalendarDays,
+  Ban, AlertTriangle,
 } from 'lucide-react';
 import {
   auth, db, storage,
@@ -34,6 +35,15 @@ const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || '';
 const FIRESTORE_BATCH_LIMIT = 500;
 const VALID_SKIN_DIMENSIONS = [[64, 64], [64, 128]];
 const DEFAULT_STEVE_SKIN = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAFDUlEQVR42u2a20sUURzH97+I/gzfeuipKIggelARBD1EQVBQD0FBRJeXIqMkMmsrK7O8pZm3NNdbbXXV9bL3mdnZ2ZnZ+8XvOTOr7ZjXnVlX54cfzO7szO75fM/5nXPmjEolISEhISEhISEhISEhMYe4CJYYweJ/fUFfCU4Y/PchScjCJfhXGAe/g5/AJ+AXkIEIDGJePAn/Ai6RR/AHCAt8RFjAfUbw6PsnkB/xKi8LfjEI1gEl4NteqkkvBS7jnf8I1zHOPwwJ/7gTenY2Ax+7d93ifayz62fB7CRy1Y8jP0poQw9/BAl8CjTCNdIh8vMrOK3ESAM58XNIAaV+x74fF/gXSk8rNEiHyNdPIm3wEw3IjdI+5pRK0F2dkN0IlGIPiL2u2HIOJ7vA3Kwq/hfOkR9AQTQH/IVHM+mfMpHAZN9JdjJG0E+k0bEQUomQINqU/RPqjd//g/SIJqHIv5VPkDrL+T89kmGzZ6FGxDhRPIGXH0PdMIvewE+x4f+0gvYwdOZmUQMILU40nnFhKu+x52Xm0mBU2OvUa7LE1oGqWflD/9n9uIEA+cR7GKu/QWQH9x3I+QA/6fPsxXq4f6r2MJ6aF2gxaLBrYlRNBv/g66z9OKBmn0G/I91IjbXCHF2wdH0gT1dlRPtcxp2vD8cCjzzjSYJ1+tVCHvgBH0J+nvTeCxJmEVPAwD0BbDbrBHPo7IhgS+FjqL5SIT8T5hyInOb6E6tGbqLnKJvRwR86TnG+v1j9xBJMl8FfCYNEeSWjHOQ9sSU6K3NdCBJyMQ2J+tQ7d5+dGBt1jN8pQVEyNITgdzBfgFwxPhYBKmSJaBJYxKCfuRZEXfJ/G2kH1uOdBkZF7LBNbRjJvVWdU3Sn2+LqoH+nXsS+ISnQ/x4VOl5sXq16EO8Dg7j/b9nJMgSAcIQEhISUrrBN2hVT7M2+Wp+qUmFz1aYK60mLTw3yfHR0fKSo+nT3c5OBjmYYyF8y81mZ3LBVqI7TxgS8k3f4mVlB0OjV/M0Kt2GUJVLJ/PcmpC9v/2f9jxfJX7z4l/5FPbLJVFSj+y1VwH3fJHybHQFP8zy8rp7MNJabnPYOd1/rMk/V6BRf3m0BO56KZzl7hbufeWf/T4+Z3v7tFXhd0HzKR4n3fCJPHwRNdJfZs6Bg3fUiY9VW8rNjhSXjEXpZ9cbb9fVq/7XTCKkLy3dGv3L7zfcq70WT9X0R/8+rR5Nj+9u7tO3u/f/6pOf/1uJ5KPDE2Y++4Pk3d5T+W1Zr9lVVHiCYj6X64HT9pN3Ln64YcvAOZUKavDCj0PbC/Z0U3M/03NLvXjKF3b8sHT3I84+kX1jVGEW/JWxYe3tN+ybWZp3SqFXaXXfnTmVbkNrnX3s6Yq/7DwTLm8MwS/KR/UDhUV+K44s2m4rdWj/UyLO78m38fzeSZm4qnp5Q7j5OqF4xpb2GPSxW41xz2OoZz5qwuE6hO8ZCwSr+28+TaR8Pw5wZEV4UKGp2ecAV2dfjhc5MQFHklkNAjkJ0SCGi1/5evbqwXGDp7RG7gVnGaFW50d4fSNd1h/tX/2OMJ3V4Dh1BXXLZN6I8yTyVZ+IZ7qFvlB2qJx4tNe8J3v+xPVDwFVw87gQ/o8Y/TCSHUYBJfEVBfhnJFKxX8E1+Bd/UOoIQkJCQkJCQkJCQkJCQkrxP3FH8/bMz1lLAAAAAElFTkSuQmCC';
+
+const EVENT_STATUSES = {
+  open:        { label: 'Open',         color: 'bg-emerald-500/20 text-emerald-400', icon: CheckCircle,   canJoin: true,  userMessage: null },
+  full:        { label: 'Full',         color: 'bg-red-500/20 text-red-400',         icon: Users,         canJoin: false, userMessage: 'This event is full. No more spots available.' },
+  cancelled:   { label: 'Cancelled',    color: 'bg-gray-500/20 text-gray-400',       icon: Ban,           canJoin: false, userMessage: 'This event has been cancelled.' },
+  coming_soon: { label: 'Coming Soon',  color: 'bg-blue-500/20 text-blue-400',       icon: Clock,         canJoin: false, userMessage: 'Registration is not yet open. Stay tuned!' },
+  ended:       { label: 'Ended',        color: 'bg-gray-500/20 text-gray-400',       icon: XCircle,       canJoin: false, userMessage: 'This event has ended.' },
+  maintenance: { label: 'Maintenance',  color: 'bg-yellow-500/20 text-yellow-400',   icon: AlertTriangle, canJoin: false, userMessage: 'This event is temporarily unavailable for maintenance.' },
+};
 
 const RULES_TEXT = [
   {
@@ -1153,15 +1163,18 @@ function Dashboard({ user, addToast, setPage }) {
   const [selectedEvent, setSelectedEvent] = useState(null);
 
   useEffect(() => {
-    (async () => {
-      try {
-        const q = query(collection(db, 'events'), where('active', '==', true), orderBy('createdAt', 'desc'));
-        const snap = await getDocs(q);
-        setEvents(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-      } catch (err) {
-        console.error('Failed to load events:', err);
-      }
-    })();
+    const q = query(collection(db, 'events'), orderBy('createdAt', 'desc'));
+    const unsub = onSnapshot(q, (snap) => {
+      const allEvents = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      // Show events that have a visible status (or legacy active events)
+      setEvents(allEvents.filter(ev => {
+        const status = ev.status || (ev.active ? 'open' : 'ended');
+        return status !== 'ended' && status !== 'cancelled';
+      }));
+    }, (err) => {
+      console.error('Failed to load events:', err);
+    });
+    return unsub;
   }, []);
 
   const quickActions = [
@@ -1214,21 +1227,42 @@ function Dashboard({ user, addToast, setPage }) {
             <Calendar size={18} className="text-orange-400"/> Available Events
           </h2>
 
-          {selectedEvent ? (
+          {selectedEvent ? (() => {
+            const evStatus = selectedEvent.status || (selectedEvent.active ? 'open' : 'ended');
+            const statusInfo = EVENT_STATUSES[evStatus] || EVENT_STATUSES.open;
+            const StatusIcon = statusInfo.icon;
+            return (
             <div className="animate-fade-in">
               <button onClick={() => setSelectedEvent(null)}
                 className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-orange-400 transition-colors mb-3">
                 <ChevronLeft size={16}/> Back to Events
               </button>
               <div className="glass rounded-xl p-4 mb-3">
-                <h3 className="text-white font-semibold flex items-center gap-2"><CalendarDays size={16} className="text-orange-400"/> {selectedEvent.name}</h3>
+                <div className="flex items-center justify-between mb-1">
+                  <h3 className="text-white font-semibold flex items-center gap-2"><CalendarDays size={16} className="text-orange-400"/> {selectedEvent.name}</h3>
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${statusInfo.color}`}>
+                    <StatusIcon size={12}/> {statusInfo.label}
+                  </span>
+                </div>
                 {selectedEvent.description && <p className="text-gray-400 text-sm mt-1">{selectedEvent.description}</p>}
               </div>
-              <ApplicationForm user={user} addToast={addToast} setPage={setPage} event={selectedEvent}/>
+              {statusInfo.canJoin ? (
+                <ApplicationForm user={user} addToast={addToast} setPage={setPage} event={selectedEvent}/>
+              ) : (
+                <div className="glass rounded-2xl p-8 text-center">
+                  <StatusIcon size={32} className="mx-auto mb-3 text-gray-500"/>
+                  <p className="text-gray-400 font-medium">{statusInfo.userMessage}</p>
+                </div>
+              )}
             </div>
-          ) : events.length > 0 ? (
+            );
+          })() : events.length > 0 ? (
             <div className="grid gap-3 animate-fade-in">
-              {events.map(ev => (
+              {events.map(ev => {
+                const evStatus = ev.status || (ev.active ? 'open' : 'ended');
+                const statusInfo = EVENT_STATUSES[evStatus] || EVENT_STATUSES.open;
+                const StatusIcon = statusInfo.icon;
+                return (
                 <button key={ev.id} onClick={() => setSelectedEvent(ev)}
                   className="w-full flex items-center justify-between px-5 py-4 glass glass-hover rounded-xl text-white transition-all group text-left">
                   <span className="flex items-center gap-3">
@@ -1237,12 +1271,18 @@ function Dashboard({ user, addToast, setPage }) {
                     </div>
                     <div>
                       <span className="font-semibold block">{ev.name}</span>
-                      {ev.description && <span className="text-gray-500 text-xs">{ev.description}</span>}
+                      {ev.description && <span className="text-gray-500 text-xs block">{ev.description}</span>}
                     </div>
                   </span>
-                  <ChevronRight size={18} className="text-gray-400 group-hover:text-orange-400 transition-colors"/>
+                  <div className="flex items-center gap-3">
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${statusInfo.color}`}>
+                      <StatusIcon size={12}/> {statusInfo.label}
+                    </span>
+                    <ChevronRight size={18} className="text-gray-400 group-hover:text-orange-400 transition-colors"/>
+                  </div>
                 </button>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="glass rounded-2xl p-8 text-center animate-fade-in">
@@ -1684,17 +1724,15 @@ function AdminPanel({ addToast }) {
     return unsub;
   }, []);
 
-  // Load events
+  // Real-time listener on events
   useEffect(() => {
-    (async () => {
-      try {
-        const q = query(collection(db, 'events'), orderBy('createdAt', 'asc'));
-        const snap = await getDocs(q);
-        setEvents(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-      } catch (err) {
-        console.error('Failed to load events:', err);
-      }
-    })();
+    const q = query(collection(db, 'events'), orderBy('createdAt', 'asc'));
+    const unsub = onSnapshot(q, (snap) => {
+      setEvents(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, (err) => {
+      console.error('Failed to load events:', err);
+    });
+    return unsub;
   }, []);
 
   const handleAddEvent = async () => {
@@ -1705,33 +1743,39 @@ function AdminPanel({ addToast }) {
         id: eventId,
         name: newEventName.trim(),
         description: newEventDescription.trim(),
-        active: true,
+        status: 'open',
         createdAt: serverTimestamp(),
       };
       await setDoc(doc(db, 'events', eventId), eventData);
-      // Refetch from Firestore to get the server timestamp
-      const snap = await getDoc(doc(db, 'events', eventId));
-      if (snap.exists()) {
-        setEvents(prev => [...prev, { id: snap.id, ...snap.data() }]);
-      }
       setNewEventName('');
       setNewEventDescription('');
       addToast('Event created!', 'success');
     } catch { addToast('Failed to create event.', 'error'); }
   };
 
-  const handleToggleEvent = async (ev) => {
+  const handleChangeEventStatus = async (ev, newStatus, note = '') => {
     try {
-      await updateDoc(doc(db, 'events', ev.id), { active: !ev.active });
-      setEvents(prev => prev.map(e => e.id === ev.id ? { ...e, active: !e.active } : e));
-      addToast(`Event ${ev.active ? 'deactivated' : 'activated'}.`, 'success');
-    } catch { addToast('Failed to update event.', 'error'); }
+      await updateDoc(doc(db, 'events', ev.id), { status: newStatus });
+      // Log the status change
+      const logId = genId();
+      await setDoc(doc(db, 'eventStatusLogs', logId), {
+        id: logId,
+        eventId: ev.id,
+        eventName: ev.name,
+        previousStatus: ev.status || (ev.active ? 'open' : 'ended'),
+        newStatus,
+        note: note || '',
+        changedBy: ADMIN_EMAIL,
+        changedAt: serverTimestamp(),
+      });
+      const statusLabel = EVENT_STATUSES[newStatus]?.label || newStatus;
+      addToast(`Event status changed to ${statusLabel}.`, 'success');
+    } catch { addToast('Failed to update event status.', 'error'); }
   };
 
   const handleDeleteEvent = async (ev) => {
     try {
       await deleteDoc(doc(db, 'events', ev.id));
-      setEvents(prev => prev.filter(e => e.id !== ev.id));
       addToast('Event deleted.', 'success');
     } catch { addToast('Failed to delete event.', 'error'); }
   };
@@ -2092,26 +2136,44 @@ function AdminPanel({ addToast }) {
 
               {events.length > 0 ? (
                 <div className="space-y-2">
-                  {events.map(ev => (
-                    <div key={ev.id} className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/10">
-                      <div className="flex-1 min-w-0">
-                        <span className="text-white text-sm font-medium">{ev.name}</span>
-                        {ev.description && <p className="text-gray-500 text-xs truncate">{ev.description}</p>}
+                  {events.map(ev => {
+                    const evStatus = ev.status || (ev.active ? 'open' : 'ended');
+                    const statusInfo = EVENT_STATUSES[evStatus] || EVENT_STATUSES.open;
+                    const StatusIcon = statusInfo.icon;
+                    return (
+                    <div key={ev.id} className="p-3 rounded-lg bg-white/5 border border-white/10 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-white text-sm font-medium">{ev.name}</span>
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${statusInfo.color}`}>
+                              <StatusIcon size={10}/> {statusInfo.label}
+                            </span>
+                          </div>
+                          {ev.description && <p className="text-gray-500 text-xs truncate mt-0.5">{ev.description}</p>}
+                        </div>
+                        <div className="flex items-center gap-2 ml-3 flex-shrink-0">
+                          <button onClick={() => handleDeleteEvent(ev)}
+                            className="p-1.5 rounded-lg text-red-400 hover:bg-red-500/20 transition-all"
+                            title="Delete event">
+                            <Trash2 size={16}/>
+                          </button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 ml-3 flex-shrink-0">
-                        <button onClick={() => handleToggleEvent(ev)}
-                          className={`p-1.5 rounded-lg transition-all ${ev.active ? 'text-emerald-400 hover:bg-emerald-500/20' : 'text-gray-600 hover:bg-white/10'}`}
-                          title={ev.active ? 'Deactivate' : 'Activate'}>
-                          {ev.active ? <ToggleRight size={20}/> : <ToggleLeft size={20}/>}
-                        </button>
-                        <button onClick={() => handleDeleteEvent(ev)}
-                          className="p-1.5 rounded-lg text-red-400 hover:bg-red-500/20 transition-all"
-                          title="Delete event">
-                          <Trash2 size={16}/>
-                        </button>
+                      <div className="flex items-center gap-2">
+                        <select
+                          value={evStatus}
+                          onChange={e => handleChangeEventStatus(ev, e.target.value)}
+                          className="flex-1 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white text-xs focus:outline-none focus:border-orange-500/50 transition cursor-pointer appearance-none"
+                          style={{ backgroundImage: 'none' }}>
+                          {Object.entries(EVENT_STATUSES).map(([key, val]) => (
+                            <option key={key} value={key} className="bg-gray-900">{val.label}</option>
+                          ))}
+                        </select>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <p className="text-gray-600 text-sm text-center py-2">No events created yet.</p>
