@@ -650,7 +650,11 @@ function ApplicationForm({ user, addToast, setPage, editData, onResubmit, event 
     }
     (async () => {
       try {
-        const q = query(collection(db, 'applications'), where('userId', '==', user.id));
+        const filters = [where('userId', '==', user.id)];
+        if (event?.id) {
+          filters.push(where('eventId', '==', event.id));
+        }
+        const q = query(collection(db, 'applications'), ...filters);
         const snap = await getDocs(q);
         if (!snap.empty) {
           setSubmitted(true);
@@ -660,7 +664,7 @@ function ApplicationForm({ user, addToast, setPage, editData, onResubmit, event 
       }
       setLoading(false);
     })();
-  }, [user.id, editData]);
+  }, [user.id, editData, event?.id]);
 
   const handleRulesScroll = () => {
     if (!rulesRef.current) return;
@@ -742,7 +746,8 @@ function ApplicationForm({ user, addToast, setPage, editData, onResubmit, event 
         setSubmitted(true);
         addToast('Your application has been submitted!', 'success');
       }
-    } catch {
+    } catch (err) {
+      console.error('Failed to submit application:', err);
       addToast('Failed to submit application. Please try again.', 'error');
     }
   };
@@ -1248,7 +1253,7 @@ function Dashboard({ user, addToast, setPage }) {
                 {selectedEvent.description && <p className="text-gray-400 text-sm mt-1">{selectedEvent.description}</p>}
               </div>
               {statusInfo.canJoin ? (
-                <ApplicationForm user={user} addToast={addToast} setPage={setPage} event={selectedEvent}/>
+                <ApplicationForm key={selectedEvent.id} user={user} addToast={addToast} setPage={setPage} event={selectedEvent}/>
               ) : (
                 <div className="glass rounded-2xl p-8 text-center">
                   <StatusIcon size={32} className="mx-auto mb-3 text-gray-500"/>
@@ -1345,6 +1350,8 @@ function StatusPage({ user, setPage, addToast }) {
               rpInterest: myApp.rpInterest || '',
               rpExplanation: myApp.rpExplanation || '',
               additionalMessage: myApp.additionalMessage || '',
+              eventId: myApp.eventId || '',
+              eventName: myApp.eventName || '',
             }}
             onResubmit={() => setEditing(false)}
           />
@@ -2474,7 +2481,7 @@ function SkinViewer3D({ skinUrl, width = 150, height = 300 }) {
 }
 
 // ─── Members Page (Public) ───
-function MembersPage() {
+function MembersPage({ setPage }) {
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -2517,6 +2524,12 @@ function MembersPage() {
   return (
     <div className="min-h-screen pt-24 pb-12 px-4 max-w-7xl mx-auto">
       <div className="animate-fade-in">
+        {setPage && (
+          <button onClick={() => setPage('dashboard')}
+            className="flex items-center gap-1.5 text-gray-400 hover:text-white mb-4 text-sm transition-colors">
+            <ChevronRight size={16} className="rotate-180"/> Back
+          </button>
+        )}
         <div className="text-center mb-10">
           <h1 className="text-3xl font-bold text-white mb-2 flex items-center justify-center gap-3">
             <Users size={28} className="text-orange-400"/> Server Members
@@ -2757,7 +2770,7 @@ export default function App() {
     switch (page) {
       case 'landing': return <LandingPage setPage={navigate} siteSettings={siteSettings} user={user}/>;
       case 'login': return user ? <Dashboard user={user} addToast={addToast} setPage={navigate}/> : <AuthPage addToast={addToast}/>;
-      case 'members': return <MembersPage/>;
+      case 'members': return <MembersPage setPage={navigate}/>;
       case 'setup-gamertag': return user ? <GamertagSetup user={user} onComplete={handleGamertagComplete} addToast={addToast}/> : <LandingPage setPage={navigate} siteSettings={siteSettings} user={user}/>;
       case 'dashboard': return user ? <Dashboard user={user} addToast={addToast} setPage={navigate}/> : <LandingPage setPage={navigate} siteSettings={siteSettings} user={user}/>;
       case 'status': return user ? <StatusPage user={user} setPage={navigate} addToast={addToast}/> : <LandingPage setPage={navigate} siteSettings={siteSettings} user={user}/>;
