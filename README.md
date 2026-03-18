@@ -98,7 +98,7 @@ service cloud.firestore {
 }
 ```
 
-> **Important:** Replace `YOUR_ADMIN_EMAIL_HERE` with your real admin email in **all three** places above.
+> **Important:** Replace `YOUR_ADMIN_EMAIL_HERE` with your real admin email in **all five** places above.
 
 Click **Publish**.
 

@@ -1688,7 +1688,7 @@ function AdminPanel({ addToast }) {
   useEffect(() => {
     (async () => {
       try {
-        const q = query(collection(db, 'events'), orderBy('createdAt'));
+        const q = query(collection(db, 'events'), orderBy('createdAt', 'asc'));
         const snap = await getDocs(q);
         setEvents(snap.docs.map(d => ({ id: d.id, ...d.data() })));
       } catch (err) {
@@ -1701,14 +1701,19 @@ function AdminPanel({ addToast }) {
     if (!newEventName.trim()) { addToast('Event name is required.', 'error'); return; }
     try {
       const eventId = genId();
-      await setDoc(doc(db, 'events', eventId), {
+      const eventData = {
         id: eventId,
         name: newEventName.trim(),
         description: newEventDescription.trim(),
         active: true,
         createdAt: serverTimestamp(),
-      });
-      setEvents(prev => [...prev, { id: eventId, name: newEventName.trim(), description: newEventDescription.trim(), active: true, createdAt: new Date() }]);
+      };
+      await setDoc(doc(db, 'events', eventId), eventData);
+      // Refetch from Firestore to get the server timestamp
+      const snap = await getDoc(doc(db, 'events', eventId));
+      if (snap.exists()) {
+        setEvents(prev => [...prev, { id: snap.id, ...snap.data() }]);
+      }
       setNewEventName('');
       setNewEventDescription('');
       addToast('Event created!', 'success');
